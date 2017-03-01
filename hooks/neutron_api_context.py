@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import ast
+
 from collections import OrderedDict
 
 from charmhelpers.core.hookenv import (
@@ -432,7 +434,88 @@ class NeutronApiSDNConfigFileContext(context.OSContextGenerator):
         return {'config': '/etc/neutron/plugins/ml2/ml2_conf.ini'}
 
 
+class NeutronApiApiPasteContext(context.OSContextGenerator):
+    interfaces = ['neutron-plugin-api-subordinate']
+
+    def __validate_middleware(self, middleware):
+        '''
+        Accepts a list of dicts of the following format:
+            {
+                'type': 'middleware_type',
+                'name': 'middleware_name',
+                'config': {
+                    option_1: value_1,
+                    # ...
+                    option_n: value_n
+                }
+        This validator was meant to be minimalistic - PasteDeploy's
+        validator will take care of the rest while our purpose here
+        is mainly config rendering - not imposing additional validation
+        logic which does not belong here.
+        '''
+        # types taken from PasteDeploy's wsgi loader
+        VALID_TYPES = ['filter', 'filter-app',
+                       'app', 'application',
+                       'composite', 'composit', 'pipeline']
+
+        def types_valid(t, n, c):
+            return all((type(t) is str,
+                       type(n) is str,
+                       type(c is dict)))
+
+        def mtype_valid(t):
+            return t in VALID_TYPES
+
+        for m in middleware:
+            t, n, c = [m.get(v) for v in ['type', 'name', 'config']]
+            # note that dict has to be non-empty
+            if not types_valid(t, n, c):
+                    raise ValueError('Extra middleware key type(s) are'
+                                     ' invalid: {}'.format(repr(m)))
+            if not mtype_valid(t):
+                    raise ValueError('Extra middleware type key is not'
+                                     ' a valid PasteDeploy middleware '
+                                     'type {}'.format(repr(t)))
+            if not c:
+                raise ValueError('Extra middleware config dictionary'
+                                 ' is empty')
+
+    def __process_unit(self, rid, unit):
+        rdata = relation_get(rid=rid, unit=unit)
+        # update extra middleware for all possible plugins
+        rdata_middleware = rdata.get('extra_middleware')
+        if rdata_middleware:
+            try:
+                middleware = ast.literal_eval(rdata_middleware)
+            except:
+                import traceback
+                log(traceback.format_exc())
+                raise ValueError('Invalid extra middleware data'
+                                 ' - check the subordinate charm')
+            if middleware:
+                return middleware
+            else:
+                log('extra_middleware specified but not'
+                    'populated by unit {}, '
+                    'relation: {}, value: {}'.format(
+                        unit, rid, repr(middleware)))
+                raise ValueError('Invalid extra middleware'
+                                 'specified by a subordinate')
+        # no extra middleware
+        return list()
+
+    def __call__(self):
+        extra_middleware = []
+        for rid in relation_ids('neutron-plugin-api-subordinate'):
+            for unit in related_units(rid):
+                extra_middleware.extend(self.__process_unit(rid, unit))
+        self.__validate_middleware(extra_middleware)
+        return {'extra_middleware': extra_middleware}\
+            if extra_middleware else {}
+
+
 class MidonetContext(context.OSContextGenerator):
+
     def __init__(self, rel_name='midonet'):
         self.rel_name = rel_name
         self.interfaces = [rel_name]

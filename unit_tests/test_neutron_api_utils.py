@@ -227,6 +227,9 @@ class TestNeutronAPIUtils(CharmTestCase):
             (nutils.NEUTRON_DEFAULT, {
                 'services': ['neutron-server'],
             }),
+            (nutils.API_PASTE_INI, {
+                'services': ['neutron-server'],
+            }),
             (ML2CONF, {
                 'services': ['neutron-server'],
             }),
@@ -255,6 +258,7 @@ class TestNeutronAPIUtils(CharmTestCase):
         templating.OSConfigRenderer.side_effect = _mock_OSConfigRenderer
         _regconfs = nutils.register_configs()
         confs = ['/etc/neutron/neutron.conf',
+                 '/etc/neutron/api-paste.ini',
                  '/etc/default/neutron-server',
                  '/etc/neutron/plugins/ml2/ml2_conf.ini',
                  '/etc/apache2/sites-available/openstack_https_frontend',

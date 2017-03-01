@@ -774,6 +774,95 @@ class NeutronApiSDNConfigFileContextTest(CharmTestCase):
         })
 
 
+class NeutronApiApiPasteContextTest(CharmTestCase):
+
+    def setUp(self):
+        super(NeutronApiApiPasteContextTest, self).setUp(
+            context, TO_PATCH)
+        self.relation_get.side_effect = self.test_relation.get
+
+    def tearDown(self):
+        super(NeutronApiApiPasteContextTest, self).tearDown()
+
+    def test_default(self):
+        middleware = []
+
+        self.test_relation.set({
+            'extra_middleware': repr(middleware)
+        })
+
+        self.relation_ids.return_value = ['rid']
+        self.related_units.return_value = ['testunit']
+
+        self.assertRaises(ValueError, context.NeutronApiApiPasteContext())
+
+    def test_string(self):
+        self.test_relation.set({'extra_middleware': 'n42'})
+
+        self.relation_ids.return_value = ['rid']
+        self.related_units.return_value = ['testunit']
+
+        self.assertRaises(ValueError, context.NeutronApiApiPasteContext())
+
+    def test_dict(self):
+        self.test_relation.set({'extra_middleware':
+                                {'dict_with': 'something'}})
+
+        self.relation_ids.return_value = ['rid']
+        self.related_units.return_value = ['testunit']
+
+        self.assertRaises(ValueError, context.NeutronApiApiPasteContext())
+
+    def test_configset(self):
+        middleware = [{'name': 'middleware_1',
+                       'type': 'filter',
+                       'config': {'setting_1': 'value_1'}},
+                      {'name': 'middleware_2',
+                       'type': 'app',
+                       'config': {'setting_2': 'value_2'}}
+                      ]
+
+        # note repr is needed to simulate charm-helpers behavior
+        # with regards to object serialization - the context
+        # implementation should safely eval the string instead
+        # of just using it
+        self.test_relation.set({
+            'extra_middleware': repr(middleware)
+        })
+        self.relation_ids.return_value = ['rid2']
+        self.related_units.return_value = ['unit1']
+        napiapipaste_ctxt = context.NeutronApiApiPasteContext()()
+        self.assertEquals(napiapipaste_ctxt, {'extra_middleware': middleware})
+
+    def __test_arg(self, key):
+        middleware = [{'name': 'middleware_1',
+                       'type': 'filter',
+                       'config': {'setting_1': 'value_1'}},
+                      {'name': 'middleware_2',
+                       'type': 'composite',
+                       'config': {'setting_2': 'value_2'}}]
+        # invalidate a key
+        middleware[0][key] = None
+
+        self.test_relation.set({
+            'extra_middleware': repr(middleware)
+        })
+
+        self.relation_ids.return_value = ['rid']
+        self.related_units.return_value = ['testunit']
+
+        self.assertRaises(ValueError, context.NeutronApiApiPasteContext())
+
+    def test_no_type(self):
+        self.__test_arg('type')
+
+    def test_no_name(self):
+        self.__test_arg('name')
+
+    def test_no_config(self):
+        self.__test_arg('config')
+
+
 class MidonetContextTest(CharmTestCase):
 
     def setUp(self):

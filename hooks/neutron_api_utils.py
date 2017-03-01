@@ -156,6 +156,7 @@ APACHE_24_CONF = '/etc/apache2/sites-available/openstack_https_frontend.conf'
 NEUTRON_DEFAULT = '/etc/default/neutron-server'
 CA_CERT_PATH = '/usr/local/share/ca-certificates/keystone_juju_ca_cert.crt'
 MEMCACHED_CONF = '/etc/memcached.conf'
+API_PASTE_INI = '%s/api-paste.ini' % NEUTRON_CONF_DIR
 
 BASE_RESOURCE_MAP = OrderedDict([
     (NEUTRON_CONF, {
@@ -182,6 +183,10 @@ BASE_RESOURCE_MAP = OrderedDict([
     (NEUTRON_DEFAULT, {
         'services': ['neutron-server'],
         'contexts': [neutron_api_context.NeutronCCContext()],
+    }),
+    (API_PASTE_INI, {
+        'services': ['neutron-server'],
+        'contexts': [neutron_api_context.NeutronApiApiPasteContext()],
     }),
     (APACHE_CONF, {
         'contexts': [neutron_api_context.ApacheSSLContext()],
@@ -393,6 +398,7 @@ def resource_map(release=None):
         resource_map[MEMCACHED_CONF] = {
             'contexts': [context.MemcacheContext()],
             'services': ['memcached']}
+
     return resource_map
 
 

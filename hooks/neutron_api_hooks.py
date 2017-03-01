@@ -63,26 +63,27 @@ from charmhelpers.contrib.openstack.utils import (
 )
 
 from neutron_api_utils import (
-    CLUSTER_RES,
-    NEUTRON_CONF,
+    additional_install_locations,
+    API_PASTE_INI,
     api_port,
+    assess_status,
+    CLUSTER_RES,
     determine_packages,
     determine_ports,
     do_openstack_upgrade,
+    dvr_router_present,
+    force_etcd_restart,
+    get_topics,
     git_install,
     is_api_ready,
-    dvr_router_present,
     l3ha_router_present,
     migrate_neutron_database,
+    NEUTRON_CONF,
     neutron_ready,
     register_configs,
     restart_map,
     services,
     setup_ipv6,
-    get_topics,
-    additional_install_locations,
-    force_etcd_restart,
-    assess_status,
 )
 from neutron_api_context import (
     get_dvr,
@@ -613,12 +614,22 @@ def zeromq_configuration_relation_joined(relid=None):
                  users="neutron")
 
 
-@hooks.hook('neutron-plugin-api-subordinate-relation-joined')
+@hooks.hook('neutron-plugin-api-subordinate-relation-joined',
+            'neutron-plugin-api-subordinate-relation-changed')
+@restart_on_change(restart_map(), stopstart=True)
 def neutron_plugin_api_subordinate_relation_joined(relid=None):
+    '''
+    -changed handles relation data set by a subordinate.
+    '''
     relation_data = {'neutron-api-ready': 'no'}
     if is_api_ready(CONFIGS):
         relation_data['neutron-api-ready'] = "yes"
     relation_set(relation_id=relid, **relation_data)
+
+    # there is no race condition with the neutron service restart
+    # as juju propagates the changes done in relation_set only after
+    # the hook exists
+    CONFIGS.write(API_PASTE_INI)
 
 
 @hooks.hook('zeromq-configuration-relation-changed',
