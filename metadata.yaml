@@ -20,6 +20,7 @@ extra-bindings:
   internal:
 series:
   - xenial
+  - zesty
   - trusty
   - yakkety
 provides:
