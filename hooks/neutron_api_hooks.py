@@ -60,6 +60,7 @@ from charmhelpers.contrib.openstack.utils import (
     sync_db_with_multi_ipv6_addresses,
     is_unit_paused_set,
     pausable_restart_on_change as restart_on_change,
+    CompareOpenStackReleases,
 )
 
 from neutron_api_utils import (
@@ -132,7 +133,7 @@ CONFIGS = register_configs()
 
 
 def conditional_neutron_migration():
-    if os_release('neutron-server') <= 'icehouse':
+    if CompareOpenStackReleases(os_release('neutron-server')) <= 'icehouse':
         log('Not running neutron database migration as migrations are handled '
             'by the neutron-server process.')
         return
@@ -204,7 +205,7 @@ def install():
 @hooks.hook('vsd-rest-api-relation-joined')
 @restart_on_change(restart_map(), stopstart=True)
 def relation_set_nuage_cms_name(rid=None):
-    if os_release('neutron-server') >= 'kilo':
+    if CompareOpenStackReleases(os_release('neutron-server')) >= 'kilo':
         if config('vsd-cms-name') is None:
             e = "Neutron Api hook failed as vsd-cms-name" \
                 " is not specified"
@@ -224,7 +225,7 @@ def vsd_changed(relation_id=None, remote_unit=None):
         if not vsd_ip_address:
             return
         vsd_address = '{}:8443'.format(vsd_ip_address)
-        if os_release('neutron-server') >= 'kilo':
+        if CompareOpenStackReleases(os_release('neutron-server')) >= 'kilo':
             vsd_cms_id = relation_get('nuage-cms-id')
             log("nuage-vsd-api-relation-changed : cms_id:{}"
                 .format(vsd_cms_id))

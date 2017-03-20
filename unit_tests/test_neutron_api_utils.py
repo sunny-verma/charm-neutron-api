@@ -121,6 +121,8 @@ class TestNeutronAPIUtils(CharmTestCase):
 
     @patch.object(nutils, 'git_install_requested')
     def test_determine_packages(self, git_requested):
+        self.os_release.return_value = 'havana'
+        self.get_os_codename_install_source.return_value = 'havana'
         git_requested.return_value = False
         pkg_list = nutils.determine_packages()
         expect = deepcopy(nutils.BASE_PACKAGES)
@@ -129,6 +131,7 @@ class TestNeutronAPIUtils(CharmTestCase):
 
     @patch.object(nutils, 'git_install_requested')
     def test_determine_vsp_packages(self, git_requested):
+        self.os_release.return_value = 'havana'
         git_requested.return_value = False
         self.test_config.set('nuage-packages',
                              'python-nuagenetlib nuage-neutron')
@@ -142,6 +145,7 @@ class TestNeutronAPIUtils(CharmTestCase):
 
     @patch.object(nutils, 'git_install_requested')
     def test_determine_packages_kilo(self, git_requested):
+        self.os_release.return_value = 'havana'
         git_requested.return_value = False
         self.get_os_codename_install_source.return_value = 'kilo'
         pkg_list = nutils.determine_packages()
@@ -153,6 +157,8 @@ class TestNeutronAPIUtils(CharmTestCase):
 
     @patch.object(nutils, 'git_install_requested')
     def test_determine_packages_noplugin(self, git_requested):
+        self.os_release.return_value = 'havana'
+        self.get_os_codename_install_source.return_value = 'havana'
         git_requested.return_value = False
         self.test_config.set('manage-neutron-plugin-legacy-mode', False)
         pkg_list = nutils.determine_packages()
@@ -161,12 +167,14 @@ class TestNeutronAPIUtils(CharmTestCase):
         self.assertItemsEqual(pkg_list, expect)
 
     def test_determine_ports(self):
+        self.os_release.return_value = 'havana'
         port_list = nutils.determine_ports()
         self.assertItemsEqual(port_list, [9696])
 
     @patch.object(nutils, 'manage_plugin')
     @patch('os.path.exists')
     def test_resource_map(self, _path_exists, _manage_plugin):
+        self.os_release.return_value = 'havana'
         _path_exists.return_value = False
         _manage_plugin.return_value = True
         _map = nutils.resource_map()
@@ -191,6 +199,7 @@ class TestNeutronAPIUtils(CharmTestCase):
     @patch.object(nutils, 'manage_plugin')
     @patch('os.path.exists')
     def test_resource_map_apache24(self, _path_exists, _manage_plugin):
+        self.os_release.return_value = 'havana'
         _path_exists.return_value = True
         _manage_plugin.return_value = True
         _map = nutils.resource_map()
@@ -202,6 +211,7 @@ class TestNeutronAPIUtils(CharmTestCase):
     @patch.object(nutils, 'manage_plugin')
     @patch('os.path.exists')
     def test_resource_map_noplugin(self, _path_exists, _manage_plugin):
+        self.os_release.return_value = 'havana'
         _path_exists.return_value = True
         _manage_plugin.return_value = False
         _map = nutils.resource_map()
@@ -217,6 +227,7 @@ class TestNeutronAPIUtils(CharmTestCase):
 
     @patch('os.path.exists')
     def test_restart_map(self, mock_path_exists):
+        self.os_release.return_value = 'havana'
         mock_path_exists.return_value = False
         _restart_map = nutils.restart_map()
         ML2CONF = "/etc/neutron/plugins/ml2/ml2_conf.ini"
@@ -244,6 +255,7 @@ class TestNeutronAPIUtils(CharmTestCase):
 
     @patch('os.path.exists')
     def test_register_configs(self, mock_path_exists):
+        self.os_release.return_value = 'havana'
         mock_path_exists.return_value = False
 
         class _mock_OSConfigRenderer():
