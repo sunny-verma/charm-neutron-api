@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import ast
+import re
 
 from collections import OrderedDict
 
@@ -22,6 +23,8 @@ from charmhelpers.core.hookenv import (
     related_units,
     relation_get,
     log,
+    DEBUG,
+    ERROR,
 )
 from charmhelpers.contrib.openstack import context
 from charmhelpers.contrib.hahelpers.cluster import (
@@ -41,6 +44,16 @@ LOCAL = 'local'
 OVERLAY_NET_TYPES = [VXLAN, GRE]
 NON_OVERLAY_NET_TYPES = [VLAN, FLAT, LOCAL]
 TENANT_NET_TYPES = [VXLAN, GRE, VLAN, FLAT, LOCAL]
+
+EXTENSION_DRIVER_PORT_SECURITY = 'port_security'
+EXTENSION_DRIVER_DNS = 'dns'
+
+# Domain name validation regex which is used to certify that
+# the domain-name consists only of valid characters, is not
+# longer than 63 characters in length for any name segment,
+# and each segment does not begin or end with a hyphen.
+DOMAIN_NAME_REGEX = re.compile(r'^(?!-)[A-Z\d-]{1,63}(?<!-)$',
+                               re.IGNORECASE)
 
 
 def get_l2population():
@@ -119,6 +132,44 @@ def get_dvr():
         return True
     else:
         return False
+
+
+def get_dns_domain():
+    if not config('enable-ml2-dns'):
+        log('ML2 DNS Extensions are not enabled.', DEBUG)
+        return ""
+
+    dns_domain = config('dns-domain')
+    if not dns_domain:
+        log('No dns-domain has been configured', DEBUG)
+        return dns_domain
+
+    release = os_release('neutron-server')
+    if CompareOpenStackReleases(release) < 'mitaka':
+        log('Internal DNS resolution is not supported before Mitaka')
+        return ""
+
+    # Strip any trailing . at the end
+    if dns_domain[-1] == '.':
+        dns_domain = dns_domain[:-1]
+
+    # Ensure that the dns name is only a valid name. Valid entries include
+    # a-z, A-Z, 0-9, ., and -. No particular name may be longer than 63
+    # characters, each part cannot begin/end with a -. Validate this here in
+    # order to prevent other chaos which may prevent neutron services from
+    # functioning properly.
+    # Note: intentionally not validating the length of the domain name because
+    # this is practically difficult to validate reasonably well.
+    for level in dns_domain.split('.'):
+        if not DOMAIN_NAME_REGEX.match(level):
+            msg = "dns-domain '%s' is an invalid domain name." % dns_domain
+            log(msg, ERROR)
+            raise ValueError(msg)
+
+    # Make sure it ends with a .
+    dns_domain += '.'
+
+    return dns_domain
 
 
 class ApacheSSLContext(context.ApacheSSLContext):
@@ -303,7 +354,17 @@ class NeutronCCContext(context.NeutronContext):
         if vni_ranges:
             ctxt['vni_ranges'] = ','.join(vni_ranges.split())
 
-        ctxt['enable_ml2_port_security'] = config('enable-ml2-port-security')
+        extension_drivers = []
+        if config('enable-ml2-port-security'):
+            extension_drivers.append(EXTENSION_DRIVER_PORT_SECURITY)
+
+        dns_domain = get_dns_domain()
+        if dns_domain:
+            extension_drivers.append(EXTENSION_DRIVER_DNS)
+            ctxt['dns_domain'] = dns_domain
+        if extension_drivers:
+            ctxt['extension_drivers'] = ','.join(extension_drivers)
+
         ctxt['enable_sriov'] = config('enable-sriov')
 
         if cmp_release == 'kilo' or cmp_release >= 'mitaka':

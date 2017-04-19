@@ -66,6 +66,31 @@ os-{admin,internal,public}-hostname(s) are set
 
 This charm only support deployment with OpenStack Icehouse or better.
 
+# Internal DNS for Cloud Guests
+
+The charm supports enabling internal DNS resolution for cloud guests in
+accordance with the OpenStack DNS integration guide. To enable internal
+DNS resolution, the 'enable-ml2-dns' option must be set to True. When
+enabled, the domain name specified in the 'dns-domain' will be advertised
+as the nameserver search path by the dhcp agents.
+
+The Nova compute service will leverage this functionality when enabled.
+When ports are allocated by the compute service, the dns_name of the port
+is populated with a DNS sanitized version of the instance's display name.
+The Neutron DHCP agents will then create host entries in the dnsmasq's
+configuration files matching the dns_name of the port to the IP address
+associated with the port.
+
+Note that the DNS nameserver provided to the instance by the DHCP agent
+depends on the tenant's network setup. The Neutron DHCP agent only advertises
+itself as a nameserver when the Neutron subnet does not have nameservers
+configured. If additional nameservers are needed and internal DNS is desired,
+then the IP address of the DHCP port should be added to the subnet's
+list of configured nameservers.
+
+For more information refer to the OpenStack documentation on
+[DNS Integration](https://docs.openstack.org/ocata/networking-guide/config-dns-int.html).
+
 # Network Space support
 
 This charm supports the use of Juju Network Spaces, allowing the charm

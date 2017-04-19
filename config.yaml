@@ -550,6 +550,13 @@ options:
     type: boolean
     default: False
     description: Enable port security extension for ML2 plugin (>= kilo).
+  enable-ml2-dns:
+    type: boolean
+    default: False
+    description: |
+      Enables the Neutron DNS extension driver (>= mitaka). When enabled,
+      ports attached to Nova instances will have DNS names assigned based
+      on the instance name.
   haproxy-server-timeout:
     type: int
     default:
@@ -649,3 +656,12 @@ options:
       when using an overlay/tunnel protocol. This option allows
       specifying a physical network MTU value that differs from the
       default global-physnet-mtu value.
+  dns-domain:
+    type: string
+    default: openstack.example.
+    description: |
+      Specifies the dns domain name that should be used for building instance
+      hostnames. An empty option or the value of 'openstacklocal' will cause
+      the dhcp agents to broadcast the default domain of openstacklocal and
+      will not enable internal cloud dns resolution. This value should end
+      with a '.', e.g. 'cloud.example.org.'.
