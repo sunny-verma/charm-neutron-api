@@ -60,6 +60,7 @@ from charmhelpers.core.host import (
     pwgen,
     lsb_release,
     CompareHostReleases,
+    is_container,
 )
 from charmhelpers.contrib.hahelpers.cluster import (
     determine_apache_port,
@@ -88,6 +89,7 @@ from charmhelpers.contrib.network.ip import (
     format_ipv6_addr,
     is_address_in_network,
     is_bridge_member,
+    is_ipv6_disabled,
 )
 from charmhelpers.contrib.openstack.utils import (
     config_flags_parser,
@@ -109,6 +111,7 @@ except ImportError:
 
 CA_CERT_PATH = '/usr/local/share/ca-certificates/keystone_juju_ca_cert.crt'
 ADDRESS_TYPES = ['admin', 'internal', 'public']
+HAPROXY_RUN_DIR = '/var/run/haproxy/'
 
 
 def ensure_packages(packages):
@@ -534,6 +537,8 @@ class HAProxyContext(OSContextGenerator):
     """Provides half a context for the haproxy template, which describes
     all peers to be included in the cluster.  Each charm needs to include
     its own context generator that describes the port mapping.
+
+    :side effect: mkdir is called on HAPROXY_RUN_DIR
     """
     interfaces = ['cluster']
 
@@ -541,6 +546,8 @@ class HAProxyContext(OSContextGenerator):
         self.singlenode_mode = singlenode_mode
 
     def __call__(self):
+        if not os.path.isdir(HAPROXY_RUN_DIR):
+            mkdir(path=HAPROXY_RUN_DIR)
         if not relation_ids('cluster') and not self.singlenode_mode:
             return {}
 
@@ -1221,6 +1228,10 @@ class BindHostContext(OSContextGenerator):
             return {'bind_host': '0.0.0.0'}
 
 
+MAX_DEFAULT_WORKERS = 4
+DEFAULT_MULTIPLIER = 2
+
+
 class WorkerConfigContext(OSContextGenerator):
 
     @property
@@ -1232,10 +1243,19 @@ class WorkerConfigContext(OSContextGenerator):
             return psutil.NUM_CPUS
 
     def __call__(self):
-        multiplier = config('worker-multiplier') or 0
+        multiplier = config('worker-multiplier') or DEFAULT_MULTIPLIER
         count = int(self.num_cpus * multiplier)
         if multiplier > 0 and count == 0:
             count = 1
+
+        if config('worker-multiplier') is None and is_container():
+            # NOTE(jamespage): Limit unconfigured worker-multiplier
+            #                  to MAX_DEFAULT_WORKERS to avoid insane
+            #                  worker configuration in LXD containers
+            #                  on large servers
+            # Reference: https://pad.lv/1665270
+            count = min(count, MAX_DEFAULT_WORKERS)
+
         ctxt = {"workers": count}
         return ctxt
 
@@ -1588,7 +1608,7 @@ class MemcacheContext(OSContextGenerator):
     """Memcache context
 
     This context provides options for configuring a local memcache client and
-    server
+    server for both IPv4 and IPv6
     """
 
     def __init__(self, package=None):
@@ -1606,13 +1626,24 @@ class MemcacheContext(OSContextGenerator):
             # Trusty version of memcached does not support ::1 as a listen
             # address so use host file entry instead
             release = lsb_release()['DISTRIB_CODENAME'].lower()
-            if CompareHostReleases(release) > 'trusty':
-                ctxt['memcache_server'] = '::1'
+            if is_ipv6_disabled():
+                if CompareHostReleases(release) > 'trusty':
+                    ctxt['memcache_server'] = '127.0.0.1'
+                else:
+                    ctxt['memcache_server'] = 'localhost'
+                ctxt['memcache_server_formatted'] = '127.0.0.1'
+                ctxt['memcache_port'] = '11211'
+                ctxt['memcache_url'] = '{}:{}'.format(
+                    ctxt['memcache_server_formatted'],
+                    ctxt['memcache_port'])
             else:
-                ctxt['memcache_server'] = 'ip6-localhost'
-            ctxt['memcache_server_formatted'] = '[::1]'
-            ctxt['memcache_port'] = '11211'
-            ctxt['memcache_url'] = 'inet6:{}:{}'.format(
-                ctxt['memcache_server_formatted'],
-                ctxt['memcache_port'])
+                if CompareHostReleases(release) > 'trusty':
+                    ctxt['memcache_server'] = '::1'
+                else:
+                    ctxt['memcache_server'] = 'ip6-localhost'
+                ctxt['memcache_server_formatted'] = '[::1]'
+                ctxt['memcache_port'] = '11211'
+                ctxt['memcache_url'] = 'inet6:{}:{}'.format(
+                    ctxt['memcache_server_formatted'],
+                    ctxt['memcache_port'])
         return ctxt

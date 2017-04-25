@@ -77,6 +77,7 @@ TO_PATCH = [
     'relation_get',
     'relation_ids',
     'relation_set',
+    'related_units',
     'service_restart',
     'unit_get',
     'get_iface_for_address',
@@ -88,7 +89,7 @@ TO_PATCH = [
     'IdentityServiceContext',
     'force_etcd_restart',
     'status_set',
-    'network_get_primary_address',
+    'get_relation_ip',
     'update_dns_ha_resource_params',
 ]
 NEUTRON_CONF_DIR = "/etc/neutron"
@@ -133,7 +134,6 @@ class NeutronAPIHooksTests(CharmTestCase):
         self.test_config.set('openstack-origin', 'distro')
         self.test_config.set('neutron-plugin', 'ovs')
         self.neutron_plugin_attribute.side_effect = _mock_nuage_npa
-        self.network_get_primary_address.side_effect = NotImplementedError
 
     def _fake_relids(self, rel_name):
         return [randrange(100) for _count in range(2)]
@@ -350,17 +350,16 @@ class NeutronAPIHooksTests(CharmTestCase):
 
     def test_db_joined(self):
         self.is_relation_made.return_value = False
-        self.unit_get.return_value = 'myhostname'
+        self.get_relation_ip.return_value = '10.0.0.1'
         self._call_hook('shared-db-relation-joined')
         self.relation_set.assert_called_with(
             username='neutron',
             database='neutron',
-            hostname='myhostname',
+            hostname='10.0.0.1',
         )
 
     def test_db_joined_spaces(self):
-        self.network_get_primary_address.side_effect = None
-        self.network_get_primary_address.return_value = '192.168.20.1'
+        self.get_relation_ip.return_value = '192.168.20.1'
         self.is_relation_made.return_value = False
         self.unit_get.return_value = 'myhostname'
         self._call_hook('shared-db-relation-joined')
