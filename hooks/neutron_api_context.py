@@ -30,6 +30,7 @@ from charmhelpers.contrib.hahelpers.cluster import (
 )
 from charmhelpers.contrib.openstack.utils import (
     os_release,
+    CompareOpenStackReleases,
 )
 
 VLAN = 'vlan'
@@ -87,7 +88,7 @@ def get_tenant_network_types():
 
 def get_l3ha():
     if config('enable-l3ha'):
-        if os_release('neutron-server') < 'juno':
+        if CompareOpenStackReleases(os_release('neutron-server')) < 'juno':
             log('Disabling L3 HA, enable-l3ha is not valid before Juno')
             return False
         if get_l2population():
@@ -100,10 +101,11 @@ def get_l3ha():
 
 def get_dvr():
     if config('enable-dvr'):
-        if os_release('neutron-server') < 'juno':
+        release = os_release('neutron-server')
+        if CompareOpenStackReleases(release) < 'juno':
             log('Disabling DVR, enable-dvr is not valid before Juno')
             return False
-        if os_release('neutron-server') == 'juno':
+        if CompareOpenStackReleases(release) == 'juno':
             if VXLAN not in config('overlay-network-type').split():
                 log('Disabling DVR, enable-dvr requires the use of the vxlan '
                     'overlay network for OpenStack Juno')
@@ -240,6 +242,7 @@ class NeutronCCContext(context.NeutronContext):
         ctxt['overlay_network_type'] = self.neutron_overlay_network_type
         ctxt['external_network'] = config('neutron-external-network')
         release = os_release('neutron-server')
+        cmp_release = CompareOpenStackReleases(release)
         if config('neutron-plugin') in ['vsp']:
             _config = config()
             for k, v in _config.iteritems():
@@ -249,7 +252,7 @@ class NeutronCCContext(context.NeutronContext):
                 for unit in related_units(rid):
                     rdata = relation_get(rid=rid, unit=unit)
                     vsd_ip = rdata.get('vsd-ip-address')
-                    if release >= 'kilo':
+                    if cmp_release >= 'kilo':
                         cms_id_value = rdata.get('nuage-cms-id')
                         log('relation data:cms_id required for'
                             ' nuage plugin: {}'.format(cms_id_value))
@@ -297,12 +300,12 @@ class NeutronCCContext(context.NeutronContext):
         ctxt['enable_ml2_port_security'] = config('enable-ml2-port-security')
         ctxt['enable_sriov'] = config('enable-sriov')
 
-        if release == 'kilo' or release >= 'mitaka':
+        if cmp_release == 'kilo' or cmp_release >= 'mitaka':
             ctxt['enable_hyperv'] = True
         else:
             ctxt['enable_hyperv'] = False
 
-        if release >= 'mitaka':
+        if cmp_release >= 'mitaka':
             if config('global-physnet-mtu'):
                 ctxt['global_physnet_mtu'] = config('global-physnet-mtu')
                 if config('path-mtu'):

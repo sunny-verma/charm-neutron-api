@@ -44,6 +44,7 @@ from charmhelpers.contrib.openstack.utils import (
     os_application_version_set,
     token_cache_pkgs,
     enable_memcache,
+    CompareOpenStackReleases,
 )
 
 from charmhelpers.contrib.python.packages import (
@@ -69,6 +70,7 @@ from charmhelpers.core.host import (
     adduser,
     add_group,
     add_user_to_group,
+    CompareHostReleases,
     mkdir,
     service_stop,
     service_start,
@@ -316,10 +318,10 @@ def determine_packages(source=None):
 
     release = get_os_codename_install_source(source)
 
-    if release >= 'kilo':
+    if CompareOpenStackReleases(release) >= 'kilo':
         packages.extend(KILO_PACKAGES)
 
-    if release == 'kilo' or release >= 'mitaka':
+    if release == 'kilo' or CompareOpenStackReleases(release) >= 'mitaka':
         packages.append('python-networking-hyperv')
 
     if config('neutron-plugin') == 'vsp':
@@ -333,7 +335,7 @@ def determine_packages(source=None):
         for p in GIT_PACKAGE_BLACKLIST:
             if p in packages:
                 packages.remove(p)
-        if release >= 'kilo':
+        if CompareOpenStackReleases(release) >= 'kilo':
             for p in GIT_PACKAGE_BLACKLIST_KILO:
                 packages.remove(p)
 
@@ -361,7 +363,7 @@ def resource_map(release=None):
     release = release or os_release('neutron-common')
 
     resource_map = deepcopy(BASE_RESOURCE_MAP)
-    if release >= 'liberty':
+    if CompareOpenStackReleases(release) >= 'liberty':
         resource_map.update(LIBERTY_RESOURCE_MAP)
 
     if os.path.exists('/etc/apache2/conf-available'):
@@ -466,7 +468,7 @@ def do_openstack_upgrade(configs):
     # Before kilo it's nova-cloud-controllers job
     if is_elected_leader(CLUSTER_RES):
         # Stamping seems broken and unnecessary in liberty (Bug #1536675)
-        if os_release('neutron-common') < 'liberty':
+        if CompareOpenStackReleases(os_release('neutron-common')) < 'liberty':
             stamp_neutron_database(cur_os_rel)
         migrate_neutron_database()
 
@@ -546,13 +548,15 @@ def get_topics():
 
 def setup_ipv6():
     ubuntu_rel = lsb_release()['DISTRIB_CODENAME'].lower()
-    if ubuntu_rel < "trusty":
+    if CompareHostReleases(ubuntu_rel) < "trusty":
         raise Exception("IPv6 is not supported in the charms for Ubuntu "
                         "versions less than Trusty 14.04")
 
     # Need haproxy >= 1.5.3 for ipv6 so for Trusty if we are <= Kilo we need to
     # use trusty-backports otherwise we can use the UCA.
-    if ubuntu_rel == 'trusty' and os_release('neutron-server') < 'liberty':
+    this_os_release = os_release('neutron-server')
+    if (ubuntu_rel == 'trusty' and
+            CompareOpenStackReleases(this_os_release) < 'liberty'):
         add_source('deb http://archive.ubuntu.com/ubuntu trusty-backports '
                    'main')
         apt_update()

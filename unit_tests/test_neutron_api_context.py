@@ -386,6 +386,7 @@ class NeutronCCContextTest(CharmTestCase):
             'enable_hyperv': False
         }
         napi_ctxt = context.NeutronCCContext()
+        self.os_release.return_value = 'havana'
         with patch.object(napi_ctxt, '_ensure_packages'):
             self.assertEquals(ctxt_data, napi_ctxt())
 
@@ -427,6 +428,7 @@ class NeutronCCContextTest(CharmTestCase):
             'enable_hyperv': False
         }
         napi_ctxt = context.NeutronCCContext()
+        self.os_release.return_value = 'havana'
         with patch.object(napi_ctxt, '_ensure_packages'):
             self.assertEquals(ctxt_data, napi_ctxt())
 
@@ -509,6 +511,7 @@ class NeutronCCContextTest(CharmTestCase):
             'enable_hyperv': False
         }
         napi_ctxt = context.NeutronCCContext()
+        self.os_release.return_value = 'havana'
         with patch.object(napi_ctxt, '_ensure_packages'):
             self.assertEquals(ctxt_data, napi_ctxt())
 
@@ -527,6 +530,7 @@ class NeutronCCContextTest(CharmTestCase):
     def test_neutroncc_context_api_rel(self, _import, plugin, nm):
         nova_url = 'http://127.0.0.10'
         plugin.return_value = None
+        self.os_release.return_value = 'havana'
         self.related_units.return_value = ['unit1']
         self.relation_ids.return_value = ['rid2']
         self.test_relation.set({'nova_url': nova_url,
@@ -553,6 +557,7 @@ class NeutronCCContextTest(CharmTestCase):
     @patch('__builtin__.__import__')
     def test_neutroncc_context_nsx(self, _import, plugin, nm):
         plugin.return_value = 'nsx'
+        self.os_release.return_value = 'havana'
         self.related_units.return_value = []
         self.test_config.set('neutron-plugin', 'nsx')
         napi_ctxt = context.NeutronCCContext()()
@@ -572,6 +577,7 @@ class NeutronCCContextTest(CharmTestCase):
     @patch('__builtin__.__import__')
     def test_neutroncc_context_nuage(self, _import, plugin, nm):
         plugin.return_value = 'vsp'
+        self.os_release.return_value = 'havana'
         self.related_units.return_value = ['vsdunit1']
         self.relation_ids.return_value = ['vsdrid2']
         self.test_config.set('neutron-plugin', 'vsp')
