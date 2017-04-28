@@ -482,6 +482,20 @@ class NeutronCCContextTest(CharmTestCase):
     @patch.object(context.NeutronCCContext, 'network_manager')
     @patch.object(context.NeutronCCContext, 'plugin')
     @patch('__builtin__.__import__')
+    def test_neutroncc_context_l3ha_l3_agents(self, _import, plugin, nm):
+        plugin.return_value = None
+        self.os_release.return_value = 'juno'
+        self.test_config.set('enable-l3ha', True)
+        self.test_config.set('l2-population', False)
+        self.test_config.set('max-l3-agents-per-router', 2)
+        self.test_config.set('min-l3-agents-per-router', 3)
+        napi_ctxt = context.NeutronCCContext()
+        with patch.object(napi_ctxt, '_ensure_packages'):
+            self.assertRaises(ValueError, napi_ctxt)
+
+    @patch.object(context.NeutronCCContext, 'network_manager')
+    @patch.object(context.NeutronCCContext, 'plugin')
+    @patch('__builtin__.__import__')
     def test_neutroncc_context_sriov(self, _import, plugin, nm):
         plugin.return_value = None
         self.test_config.set('enable-sriov', True)

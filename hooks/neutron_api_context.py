@@ -233,10 +233,16 @@ class NeutronCCContext(context.NeutronContext):
         ctxt['enable_dvr'] = self.neutron_dvr
         ctxt['l3_ha'] = self.neutron_l3ha
         if self.neutron_l3ha:
-            ctxt['max_l3_agents_per_router'] = \
-                config('max-l3-agents-per-router')
-            ctxt['min_l3_agents_per_router'] = \
-                config('min-l3-agents-per-router')
+            max_agents = config('max-l3-agents-per-router')
+            min_agents = config('min-l3-agents-per-router')
+            if max_agents < min_agents:
+                raise ValueError("max-l3-agents-per-router ({}) must be >= "
+                                 "min-l3-agents-per-router "
+                                 "({})".format(max_agents, min_agents))
+
+            ctxt['max_l3_agents_per_router'] = max_agents
+            ctxt['min_l3_agents_per_router'] = min_agents
+
         ctxt['dhcp_agents_per_network'] = config('dhcp-agents-per-network')
         ctxt['tenant_network_types'] = self.neutron_tenant_network_types
         ctxt['overlay_network_type'] = self.neutron_overlay_network_type
