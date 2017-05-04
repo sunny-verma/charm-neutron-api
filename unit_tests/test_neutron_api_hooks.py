@@ -82,7 +82,6 @@ TO_PATCH = [
     'unit_get',
     'get_iface_for_address',
     'get_netmask_for_address',
-    'get_address_in_network',
     'update_nrpe_config',
     'service_reload',
     'neutron_plugin_attribute',
