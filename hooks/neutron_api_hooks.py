@@ -87,6 +87,7 @@ from neutron_api_utils import (
     setup_ipv6,
 )
 from neutron_api_context import (
+    get_dns_domain,
     get_dvr,
     get_l3ha,
     get_l2population,
@@ -501,6 +502,10 @@ def neutron_plugin_api_relation_joined(rid=None):
         'service_password': identity_ctxt.get('admin_password'),
         'region': config('region'),
     })
+
+    dns_domain = get_dns_domain()
+    if dns_domain:
+        relation_data['dns-domain'] = dns_domain
 
     if is_api_ready(CONFIGS):
         relation_data['neutron-api-ready'] = "yes"

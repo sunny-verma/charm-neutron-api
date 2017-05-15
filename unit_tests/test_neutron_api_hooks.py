@@ -60,6 +60,7 @@ TO_PATCH = [
     'l3ha_router_present',
     'execd_preinstall',
     'filter_installed_packages',
+    'get_dns_domain',
     'get_dvr',
     'get_l3ha',
     'get_l2population',
@@ -538,6 +539,7 @@ class NeutronAPIHooksTests(CharmTestCase):
         port = 1234
         _canonical_url.return_value = host
         self.api_port.return_value = port
+        self.get_dns_domain.return_value = ""
         self.is_relation_made = True
         neutron_url = '%s:%s' % (host, port)
         _relation_data = {
@@ -620,6 +622,7 @@ class NeutronAPIHooksTests(CharmTestCase):
         self.get_l3ha.return_value = False
         self.get_l2population.return_value = False
         self.get_overlay_network_type.return_value = 'vxlan'
+        self.get_dns_domain.return_value = ''
         self._call_hook('neutron-plugin-api-relation-joined')
         self.relation_set.assert_called_with(
             relation_id=None,
@@ -653,6 +656,7 @@ class NeutronAPIHooksTests(CharmTestCase):
         self.get_l3ha.return_value = False
         self.get_l2population.return_value = True
         self.get_overlay_network_type.return_value = 'vxlan'
+        self.get_dns_domain.return_value = ''
         self._call_hook('neutron-plugin-api-relation-joined')
         self.relation_set.assert_called_with(
             relation_id=None,
@@ -686,6 +690,7 @@ class NeutronAPIHooksTests(CharmTestCase):
         self.get_l3ha.return_value = True
         self.get_l2population.return_value = False
         self.get_overlay_network_type.return_value = 'vxlan'
+        self.get_dns_domain.return_value = ''
         self._call_hook('neutron-plugin-api-relation-joined')
         self.relation_set.assert_called_with(
             relation_id=None,
@@ -721,6 +726,42 @@ class NeutronAPIHooksTests(CharmTestCase):
         self.get_l3ha.return_value = True
         self.get_l2population.return_value = False
         self.get_overlay_network_type.return_value = 'vxlan'
+        self.get_dns_domain.return_value = ''
+        self._call_hook('neutron-plugin-api-relation-joined')
+        self.relation_set.assert_called_with(
+            relation_id=None,
+            **_relation_data
+        )
+
+    def test_neutron_plugin_api_relation_joined_dns(self):
+        self.unit_get.return_value = '172.18.18.18'
+        self.IdentityServiceContext.return_value = \
+            DummyContext(return_value={})
+        _relation_data = {
+            'neutron-security-groups': False,
+            'enable-dvr': False,
+            'enable-l3ha': False,
+            'addr': '172.18.18.18',
+            'l2-population': False,
+            'overlay-network-type': 'vxlan',
+            'service_protocol': None,
+            'auth_protocol': None,
+            'service_tenant': None,
+            'service_port': None,
+            'region': 'RegionOne',
+            'service_password': None,
+            'auth_port': None,
+            'auth_host': None,
+            'service_username': None,
+            'service_host': None,
+            'neutron-api-ready': 'no',
+            'dns-domain': 'openstack.example.'
+        }
+        self.get_dvr.return_value = False
+        self.get_l3ha.return_value = False
+        self.get_l2population.return_value = False
+        self.get_overlay_network_type.return_value = 'vxlan'
+        self.get_dns_domain.return_value = 'openstack.example.'
         self._call_hook('neutron-plugin-api-relation-joined')
         self.relation_set.assert_called_with(
             relation_id=None,

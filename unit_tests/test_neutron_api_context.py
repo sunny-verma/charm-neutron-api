@@ -203,6 +203,27 @@ class GeneralTests(CharmTestCase):
         self.os_release.return_value = 'juno'
         self.assertEquals(context.get_dvr(), False)
 
+    def test_get_dns_domain(self):
+        self.test_config.set('dns-domain', 'example.org.')
+        self.test_config.set('enable-ml2-dns', True)
+        self.os_release.return_value = 'mitaka'
+        self.assertEquals(context.get_dns_domain(), 'example.org.')
+
+    def test_get_dns_domain_bad_values(self):
+        self.os_release.return_value = 'mitaka'
+        self.test_config.set('enable-ml2-dns', True)
+        bad_values = ['example@foo.org',
+                      'exclamation!marks.notwelcom.ed',
+                      '%s.way.too.long' % ('x' * 64),
+                      '-hyphen.in.front',
+                      'hypen-.in.back',
+                      'no_.under_scor.es',
+                      ]
+
+        for value in bad_values:
+            self.test_config.set('dns-domain', value)
+            self.assertRaises(ValueError, context.get_dns_domain)
+
 
 class IdentityServiceContext(CharmTestCase):
 
@@ -385,13 +406,57 @@ class NeutronCCContextTest(CharmTestCase):
             'quota_vip': 10,
             'vlan_ranges': 'physnet1:1000:2000',
             'vni_ranges': '1001:2000',
-            'enable_ml2_port_security': True,
+            'extension_drivers': 'port_security',
             'enable_hyperv': False
         }
         napi_ctxt = context.NeutronCCContext()
         self.os_release.return_value = 'havana'
         with patch.object(napi_ctxt, '_ensure_packages'):
             self.assertEquals(ctxt_data, napi_ctxt())
+
+    @patch.object(context.NeutronCCContext, 'network_manager')
+    @patch.object(context.NeutronCCContext, 'plugin')
+    def test_neutroncc_context_dns_setting(self, plugin, nm):
+        plugin.return_value = None
+        self.test_config.set('enable-ml2-dns', True)
+        self.test_config.set('dns-domain', 'example.org.')
+        self.os_release.return_value = 'mitaka'
+        napi_ctxt = context.NeutronCCContext()
+        with patch.object(napi_ctxt, '_ensure_packages'):
+            ctxt = napi_ctxt()
+            self.assertEqual('example.org.', ctxt['dns_domain'])
+            self.assertEqual('port_security,dns', ctxt['extension_drivers'])
+
+    @patch.object(context.NeutronCCContext, 'network_manager')
+    @patch.object(context.NeutronCCContext, 'plugin')
+    def test_neutroncc_context_dns_no_port_security_setting(self,
+                                                            plugin, nm):
+        """Verify extension drivers without port security."""
+        plugin.return_value = None
+        self.test_config.set('enable-ml2-port-security', False)
+        self.test_config.set('enable-ml2-dns', True)
+        self.test_config.set('dns-domain', 'example.org.')
+        self.os_release.return_value = 'mitaka'
+        napi_ctxt = context.NeutronCCContext()
+        with patch.object(napi_ctxt, '_ensure_packages'):
+            ctxt = napi_ctxt()
+            self.assertEquals('example.org.', ctxt['dns_domain'])
+            self.assertEquals('dns', ctxt['extension_drivers'])
+
+    @patch.object(context.NeutronCCContext, 'network_manager')
+    @patch.object(context.NeutronCCContext, 'plugin')
+    def test_neutroncc_context_dns_kilo(self, plugin, nm):
+        """Verify dns extension and domain are not specified in kilo."""
+        plugin.return_value = None
+        self.test_config.set('enable-ml2-port-security', False)
+        self.test_config.set('enable-ml2-dns', True)
+        self.test_config.set('dns-domain', 'example.org.')
+        self.os_release.return_value = 'kilo'
+        napi_ctxt = context.NeutronCCContext()
+        with patch.object(napi_ctxt, '_ensure_packages'):
+            ctxt = napi_ctxt()
+            self.assertFalse('dns_domain' in ctxt)
+            self.assertFalse('extension_drivers' in ctxt)
 
     @patch.object(context.NeutronCCContext, 'network_manager')
     @patch.object(context.NeutronCCContext, 'plugin')
@@ -427,7 +492,7 @@ class NeutronCCContextTest(CharmTestCase):
             'vlan_ranges': 'physnet1:1000:2000',
             'vni_ranges': '1001:2000,3001:4000',
             'network_providers': 'physnet2,physnet3',
-            'enable_ml2_port_security': True,
+            'extension_drivers': 'port_security',
             'enable_hyperv': False
         }
         napi_ctxt = context.NeutronCCContext()
@@ -472,7 +537,7 @@ class NeutronCCContextTest(CharmTestCase):
             'quota_vip': 10,
             'vlan_ranges': 'physnet1:1000:2000',
             'vni_ranges': '1001:2000',
-            'enable_ml2_port_security': True,
+            'extension_drivers': 'port_security',
             'enable_hyperv': False
         }
         napi_ctxt = context.NeutronCCContext()
@@ -524,7 +589,7 @@ class NeutronCCContextTest(CharmTestCase):
             'quota_vip': 10,
             'vlan_ranges': 'physnet1:1000:2000',
             'vni_ranges': '1001:2000',
-            'enable_ml2_port_security': True,
+            'extension_drivers': 'port_security',
             'enable_hyperv': False
         }
         napi_ctxt = context.NeutronCCContext()
