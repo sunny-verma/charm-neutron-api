@@ -221,6 +221,24 @@ options:
     default: False
     description: |
       Enable SR-IOV networking support across Neutron and Nova.
+  supported-pci-vendor-devs:
+    type: string
+    default:
+    description: |
+      NOTE: Required for OpenStack versions Kilo, Liberty and Mitaka. Ignored
+      for OpenStack Newton and newer.
+      .
+      Space-delimited list of supported Vendor PCI Devices, in format
+      vendor_id:product_id
+      .
+      Example: 15b3:1004 8086:10ca
+      .
+      This must be set to match available hardware on nova-compute units.
+      Neutron will refuse to bind ports to hardware with Vendor PCI IDs not
+      in this list. (Use lspci -nn to get IDs)
+      .
+      NOTE: The vendor_id:product_id of the PFs and VFs differ. Make sure to
+      enter the correct one for your use case.
   midonet-origin:
     type: string
     default: midonet-2015.06

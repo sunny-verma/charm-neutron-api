@@ -173,6 +173,27 @@ def get_dns_domain():
     return dns_domain
 
 
+def get_ml2_mechanism_drivers():
+    """Build comma delimited list of mechanism drivers for use in Neutron
+       ml2_conf.ini. Which drivers to enable are deduced from OpenStack
+       release and charm configuration options.
+    """
+    mechanism_drivers = [
+        'openvswitch',
+    ]
+
+    cmp_release = CompareOpenStackReleases(os_release('neutron-server'))
+    if (cmp_release == 'kilo' or cmp_release >= 'mitaka'):
+        mechanism_drivers.append('hyperv')
+
+    if get_l2population():
+        mechanism_drivers.append('l2population')
+
+    if (config('enable-sriov') and cmp_release >= 'kilo'):
+        mechanism_drivers.append('sriovnicswitch')
+    return ','.join(mechanism_drivers)
+
+
 class ApacheSSLContext(context.ApacheSSLContext):
 
     interfaces = ['https']
@@ -368,11 +389,6 @@ class NeutronCCContext(context.NeutronContext):
 
         ctxt['enable_sriov'] = config('enable-sriov')
 
-        if cmp_release == 'kilo' or cmp_release >= 'mitaka':
-            ctxt['enable_hyperv'] = True
-        else:
-            ctxt['enable_hyperv'] = False
-
         if cmp_release >= 'mitaka':
             if config('global-physnet-mtu'):
                 ctxt['global_physnet_mtu'] = config('global-physnet-mtu')
@@ -380,6 +396,14 @@ class NeutronCCContext(context.NeutronContext):
                     ctxt['path_mtu'] = config('path-mtu')
                 else:
                     ctxt['path_mtu'] = config('global-physnet-mtu')
+
+        if 'kilo' <= cmp_release <= 'mitaka':
+            pci_vendor_devs = config('supported-pci-vendor-devs')
+            if pci_vendor_devs:
+                ctxt['supported_pci_vendor_devs'] = \
+                    ','.join(pci_vendor_devs.split())
+
+        ctxt['mechanism_drivers'] = get_ml2_mechanism_drivers()
 
         return ctxt
 

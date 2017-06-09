@@ -224,6 +224,40 @@ class GeneralTests(CharmTestCase):
             self.test_config.set('dns-domain', value)
             self.assertRaises(ValueError, context.get_dns_domain)
 
+    def test_get_ml2_mechanism_drivers(self):
+        self.os_release.return_value = 'mitaka'
+        self.assertEquals(context.get_ml2_mechanism_drivers(),
+                          'openvswitch,hyperv,l2population')
+
+    def test_get_ml2_mechanism_drivers_kilo(self):
+        self.os_release.return_value = 'kilo'
+        self.assertEquals(context.get_ml2_mechanism_drivers(),
+                          'openvswitch,hyperv,l2population')
+
+    def test_get_ml2_mechanism_drivers_liberty(self):
+        self.os_release.return_value = 'liberty'
+        self.assertEquals(context.get_ml2_mechanism_drivers(),
+                          'openvswitch,l2population')
+
+    def test_get_ml2_mechanism_drivers_no_l2pop(self):
+        self.os_release.return_value = 'mitaka'
+        self.test_config.set('l2-population', False)
+        self.assertEquals(context.get_ml2_mechanism_drivers(),
+                          'openvswitch,hyperv')
+
+    def test_get_ml2_mechanism_drivers_sriov(self):
+        self.os_release.return_value = 'mitaka'
+        self.test_config.set('enable-sriov', True)
+        self.assertEquals(context.get_ml2_mechanism_drivers(),
+                          'openvswitch,hyperv,l2population,sriovnicswitch')
+
+    def test_get_ml2_mechanism_drivers_no_l2pop_sriov(self):
+        self.os_release.return_value = 'mitaka'
+        self.test_config.set('enable-sriov', True)
+        self.test_config.set('l2-population', False)
+        self.assertEquals(context.get_ml2_mechanism_drivers(),
+                          'openvswitch,hyperv,sriovnicswitch')
+
 
 class IdentityServiceContext(CharmTestCase):
 
@@ -385,6 +419,7 @@ class NeutronCCContextTest(CharmTestCase):
             'debug': True,
             'enable_dvr': False,
             'l3_ha': False,
+            'mechanism_drivers': 'openvswitch,l2population',
             'dhcp_agents_per_network': 3,
             'enable_sriov': False,
             'external_network': 'bob',
@@ -407,7 +442,6 @@ class NeutronCCContextTest(CharmTestCase):
             'vlan_ranges': 'physnet1:1000:2000',
             'vni_ranges': '1001:2000',
             'extension_drivers': 'port_security',
-            'enable_hyperv': False
         }
         napi_ctxt = context.NeutronCCContext()
         self.os_release.return_value = 'havana'
@@ -470,6 +504,7 @@ class NeutronCCContextTest(CharmTestCase):
             'debug': True,
             'enable_dvr': False,
             'l3_ha': False,
+            'mechanism_drivers': 'openvswitch,l2population',
             'dhcp_agents_per_network': 3,
             'enable_sriov': False,
             'external_network': 'bob',
@@ -493,7 +528,6 @@ class NeutronCCContextTest(CharmTestCase):
             'vni_ranges': '1001:2000,3001:4000',
             'network_providers': 'physnet2,physnet3',
             'extension_drivers': 'port_security',
-            'enable_hyperv': False
         }
         napi_ctxt = context.NeutronCCContext()
         self.os_release.return_value = 'havana'
@@ -514,7 +548,7 @@ class NeutronCCContextTest(CharmTestCase):
             'debug': True,
             'enable_dvr': False,
             'l3_ha': True,
-            'enable_sriov': False,
+            'mechanism_drivers': 'openvswitch',
             'external_network': 'bob',
             'neutron_bind_port': self.api_port,
             'verbose': True,
@@ -524,6 +558,7 @@ class NeutronCCContextTest(CharmTestCase):
             'max_l3_agents_per_router': 2,
             'min_l3_agents_per_router': 2,
             'dhcp_agents_per_network': 3,
+            'enable_sriov': False,
             'quota_floatingip': 50,
             'quota_health_monitors': -1,
             'quota_member': -1,
@@ -538,7 +573,6 @@ class NeutronCCContextTest(CharmTestCase):
             'vlan_ranges': 'physnet1:1000:2000',
             'vni_ranges': '1001:2000',
             'extension_drivers': 'port_security',
-            'enable_hyperv': False
         }
         napi_ctxt = context.NeutronCCContext()
         with patch.object(napi_ctxt, '_ensure_packages'):
@@ -564,12 +598,17 @@ class NeutronCCContextTest(CharmTestCase):
     def test_neutroncc_context_sriov(self, _import, plugin, nm):
         plugin.return_value = None
         self.test_config.set('enable-sriov', True)
+        self.test_config.set('supported-pci-vendor-devs',
+                             '1111:3333  2222:4444')
         ctxt_data = {
             'debug': True,
             'enable_dvr': False,
             'l3_ha': False,
+            'mechanism_drivers': 'openvswitch,hyperv,l2population'
+                                 ',sriovnicswitch',
             'dhcp_agents_per_network': 3,
             'enable_sriov': True,
+            'supported_pci_vendor_devs': '1111:3333,2222:4444',
             'external_network': 'bob',
             'neutron_bind_port': self.api_port,
             'verbose': True,
@@ -590,10 +629,9 @@ class NeutronCCContextTest(CharmTestCase):
             'vlan_ranges': 'physnet1:1000:2000',
             'vni_ranges': '1001:2000',
             'extension_drivers': 'port_security',
-            'enable_hyperv': False
         }
         napi_ctxt = context.NeutronCCContext()
-        self.os_release.return_value = 'havana'
+        self.os_release.return_value = 'kilo'
         with patch.object(napi_ctxt, '_ensure_packages'):
             self.assertEquals(ctxt_data, napi_ctxt())
 

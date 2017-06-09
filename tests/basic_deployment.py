@@ -171,6 +171,9 @@ class NeutronAPIBasicDeployment(OpenStackAmuletDeployment):
             neutron_api_config['openstack-origin-git'] = \
                 yaml.dump(openstack_origin_git)
 
+        neutron_api_config['enable-sriov'] = True
+        neutron_api_config['supported-pci-vendor-devs'] = '8086:1515'
+
         keystone_config = {'admin-password': 'openstack',
                            'admin-token': 'ubuntutesting'}
         nova_cc_config = {'network-manager': 'Neutron'}
@@ -211,11 +214,17 @@ class NeutronAPIBasicDeployment(OpenStackAmuletDeployment):
            service units."""
         u.log.debug('Checking status of system services...')
         neutron_api_services = ['neutron-server']
+        nova_cc_services = ['nova-api-os-compute',
+                            'nova-cert',
+                            'nova-scheduler',
+                            'nova-conductor']
+
         if self._get_openstack_release() >= self.xenial_newton:
             neutron_services = ['neutron-dhcp-agent',
                                 'neutron-lbaasv2-agent',
                                 'neutron-metadata-agent',
                                 'neutron-openvswitch-agent']
+            nova_cc_services.remove('nova-cert')
         elif self._get_openstack_release() >= self.trusty_mitaka and \
                 self._get_openstack_release() < self.xenial_newton:
             neutron_services = ['neutron-dhcp-agent',
@@ -233,11 +242,6 @@ class NeutronAPIBasicDeployment(OpenStackAmuletDeployment):
 
         if self._get_openstack_release() < self.trusty_kilo:
             neutron_services.append('neutron-metering-agent')
-
-        nova_cc_services = ['nova-api-os-compute',
-                            'nova-cert',
-                            'nova-scheduler',
-                            'nova-conductor']
 
         services = {
             self.keystone_sentry: ['keystone'],
@@ -607,18 +611,30 @@ class NeutronAPIBasicDeployment(OpenStackAmuletDeployment):
             },
             'securitygroup': {
                 'enable_security_group': 'False',
-            }
+            },
         }
 
-        if self._get_openstack_release() == self.trusty_liberty:
-            # Liberty
-            expected['ml2'].update({
-                'mechanism_drivers': 'openvswitch,l2population'
-            })
-        else:
-            # Earlier or later than Liberty
+        if self._get_openstack_release() < self.trusty_kilo:
+            # Pre-Kilo
             expected['ml2'].update({
                 'mechanism_drivers': 'openvswitch,hyperv,l2population'
+            })
+        elif self._get_openstack_release() == self.trusty_liberty:
+            # Liberty
+            expected['ml2'].update({
+                'mechanism_drivers': 'openvswitch,l2population,sriovnicswitch'
+            })
+        else:
+            # Juno, Kilo, Mitaka and newer
+            expected['ml2'].update({
+                'mechanism_drivers': 'openvswitch,hyperv,l2population'
+                                     ',sriovnicswitch'
+            })
+
+        if ('kilo' <= self._get_openstack_release() <= 'mitaka'):
+            # Kilo through Mitaka require supported_pci_vendor_devs set
+            expected['ml2_sriov'].update({
+                'supported_pci_vendor_devs': '8086:1515',
             })
 
         for section, pairs in expected.iteritems():

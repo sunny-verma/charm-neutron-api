@@ -159,6 +159,12 @@ NEUTRON_DEFAULT = '/etc/default/neutron-server'
 CA_CERT_PATH = '/usr/local/share/ca-certificates/keystone_juju_ca_cert.crt'
 MEMCACHED_CONF = '/etc/memcached.conf'
 API_PASTE_INI = '%s/api-paste.ini' % NEUTRON_CONF_DIR
+# NOTE:(fnordahl) placeholder ml2_conf_srov.ini pointing users to ml2_conf.ini
+# Due to how neutron init scripts are laid out on various Linux
+# distributions we put the [ml2_sriov] section in ml2_conf.ini instead
+# of its default ml2_conf_sriov.ini location.
+ML2_SRIOV_INI = os.path.join(NEUTRON_CONF_DIR,
+                             'plugins/ml2/ml2_conf_sriov.ini')
 
 BASE_RESOURCE_MAP = OrderedDict([
     (NEUTRON_CONF, {
@@ -392,6 +398,11 @@ def resource_map(release=None):
         resource_map[conf]['contexts'].append(
             context.PostgresqlDBContext(database=config('database')))
 
+        if ('kilo' <= CompareOpenStackReleases(release) <= 'mitaka' and
+                config('enable-sriov')):
+            resource_map[ML2_SRIOV_INI] = {}
+            resource_map[ML2_SRIOV_INI]['services'] = services
+            resource_map[ML2_SRIOV_INI]['contexts'] = []
     else:
         resource_map[NEUTRON_CONF]['contexts'].append(
             neutron_api_context.NeutronApiSDNContext()
