@@ -174,6 +174,11 @@ class NeutronAPIBasicDeployment(OpenStackAmuletDeployment):
         neutron_api_config['enable-sriov'] = True
         neutron_api_config['supported-pci-vendor-devs'] = '8086:1515'
 
+        if self._get_openstack_release() >= self.trusty_mitaka:
+            neutron_api_config['enable-ml2-dns'] = True
+            # openstack.example. is the default but be explicit for the test
+            neutron_api_config['dns-domain'] = 'openstack.example.'
+
         keystone_config = {'admin-password': 'openstack',
                            'admin-token': 'ubuntutesting'}
         nova_cc_config = {'network-manager': 'Neutron'}
@@ -393,6 +398,12 @@ class NeutronAPIBasicDeployment(OpenStackAmuletDeployment):
             'service_tenant': 'services',
             'service_username': 'neutron',
         }
+
+        if self._get_openstack_release() >= self.trusty_mitaka:
+            expected.update({
+                'dns-domain': 'openstack.example.',
+            })
+
         ret = u.validate_relation_data(unit, relation, expected)
         if ret:
             message = u.relation_error(
@@ -409,6 +420,7 @@ class NeutronAPIBasicDeployment(OpenStackAmuletDeployment):
         expected = {
             'private-address': u.valid_ip,
         }
+
         ret = u.validate_relation_data(unit, relation, expected)
         if ret:
             message = u.relation_error('neutron-api neutron-plugin-api', ret)
@@ -480,6 +492,11 @@ class NeutronAPIBasicDeployment(OpenStackAmuletDeployment):
                 'connection': db_conn,
             },
         }
+
+        if self._get_openstack_release() >= self.trusty_mitaka:
+            expected['DEFAULT'].update({
+                'dns_domain': 'openstack.example.'
+            })
 
         auth_uri = '{}://{}:{}'.format(
             rel_napi_ks['service_protocol'],
@@ -630,6 +647,11 @@ class NeutronAPIBasicDeployment(OpenStackAmuletDeployment):
             # Kilo through Mitaka require supported_pci_vendor_devs set
             expected['ml2_sriov'].update({
                 'supported_pci_vendor_devs': '8086:1515',
+            })
+
+        if self._get_openstack_release() >= self.trusty_mitaka:
+            expected['ml2'].update({
+                'extension_drivers': 'dns',
             })
 
         for section, pairs in expected.iteritems():
