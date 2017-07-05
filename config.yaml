@@ -362,6 +362,25 @@ options:
       to twice the number of CPU cores a service unit has. When deployed in a
       LXD container, this default value will be capped to 4 workers unless this
       configuration option is set.
+  polling-interval:
+    type: int
+    default: 2
+    description: |
+      The number of seconds the agent will wait between polling for local device changes.
+      Used by neutron l2 agents.
+  rpc-response-timeout:
+    type: int
+    default: 60
+    description: |
+      Seconds to wait for a response from a call.
+      Used by all neutron agents (includes l2 agents and other types of agents).
+  report-interval:
+    type: int
+    default: 30
+    description: |
+      Seconds between nodes reporting state to server; should be less than agent_down_time,
+      best if it is half or less than agent_down_time.
+      Used by all neutron agents (includes l2 agents and other types of agents).
   # Quota config
   quota-security-group:
     type: int

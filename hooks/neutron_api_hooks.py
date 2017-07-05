@@ -478,6 +478,9 @@ def neutron_plugin_api_relation_joined(rid=None):
             'enable-l3ha': get_l3ha(),
             'overlay-network-type': get_overlay_network_type(),
             'addr': unit_get('private-address'),
+            'polling-interval': config('polling-interval'),
+            'rpc-response-timeout': config('rpc-response-timeout'),
+            'report-interval': config('report-interval'),
         }
 
         # Provide this value to relations since it needs to be set in multiple
