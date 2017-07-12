@@ -169,7 +169,7 @@ ML2_SRIOV_INI = os.path.join(NEUTRON_CONF_DIR,
 BASE_RESOURCE_MAP = OrderedDict([
     (NEUTRON_CONF, {
         'services': ['neutron-server'],
-        'contexts': [context.AMQPContext(ssl_dir=NEUTRON_CONF_DIR),
+        'contexts': [neutron_api_context.NeutronAMQPContext(),
                      context.SharedDBContext(
                          user=config('database-user'),
                          database=config('database'),

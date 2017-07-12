@@ -48,6 +48,13 @@ TENANT_NET_TYPES = [VXLAN, GRE, VLAN, FLAT, LOCAL]
 EXTENSION_DRIVER_PORT_SECURITY = 'port_security'
 EXTENSION_DRIVER_DNS = 'dns'
 
+ETC_NEUTRON = '/etc/neutron'
+
+NOTIFICATION_TOPICS = [
+    'notifications',
+    'notifications_designate'
+]
+
 # Domain name validation regex which is used to certify that
 # the domain-name consists only of valid characters, is not
 # longer than 63 characters in length for any name segment,
@@ -626,3 +633,15 @@ class MidonetContext(context.OSContextGenerator):
                 if self.context_complete(ctxt):
                     return ctxt
         return {}
+
+
+class NeutronAMQPContext(context.AMQPContext):
+    '''AMQP context with Neutron API sauce'''
+
+    def __init__(self):
+        super(NeutronAMQPContext, self).__init__(ssl_dir=ETC_NEUTRON)
+
+    def __call__(self):
+        context = super(NeutronAMQPContext, self).__call__()
+        context['notification_topics'] = ','.join(NOTIFICATION_TOPICS)
+        return context
