@@ -381,6 +381,11 @@ options:
       Seconds between nodes reporting state to server; should be less than agent_down_time,
       best if it is half or less than agent_down_time.
       Used by all neutron agents (includes l2 agents and other types of agents).
+  enable-qos:
+    type: boolean
+    default: False
+    description: |
+      Enable QoS (assuming the plug-in or ml2 mechanism driver can support it)
   # Quota config
   quota-security-group:
     type: int

@@ -67,6 +67,7 @@ TO_PATCH = [
     'get_overlay_network_type',
     'git_install',
     'is_elected_leader',
+    'is_qos_requested_and_valid',
     'is_relation_made',
     'log',
     'migrate_neutron_database',
@@ -602,6 +603,7 @@ class NeutronAPIHooksTests(CharmTestCase):
             'neutron-security-groups': False,
             'enable-dvr': False,
             'enable-l3ha': False,
+            'enable-qos': False,
             'addr': '172.18.18.18',
             'polling-interval': 2,
             'rpc-response-timeout': 60,
@@ -620,6 +622,7 @@ class NeutronAPIHooksTests(CharmTestCase):
             'service_host': None,
             'neutron-api-ready': 'no',
         }
+        self.is_qos_requested_and_valid.return_value = False
         self.get_dvr.return_value = False
         self.get_l3ha.return_value = False
         self.get_l2population.return_value = False
@@ -639,6 +642,7 @@ class NeutronAPIHooksTests(CharmTestCase):
             'neutron-security-groups': False,
             'enable-dvr': True,
             'enable-l3ha': False,
+            'enable-qos': False,
             'addr': '172.18.18.18',
             'polling-interval': 2,
             'rpc-response-timeout': 60,
@@ -657,6 +661,7 @@ class NeutronAPIHooksTests(CharmTestCase):
             'service_host': None,
             'neutron-api-ready': 'no',
         }
+        self.is_qos_requested_and_valid.return_value = False
         self.get_dvr.return_value = True
         self.get_l3ha.return_value = False
         self.get_l2population.return_value = True
@@ -676,6 +681,7 @@ class NeutronAPIHooksTests(CharmTestCase):
             'neutron-security-groups': False,
             'enable-dvr': False,
             'enable-l3ha': True,
+            'enable-qos': False,
             'addr': '172.18.18.18',
             'polling-interval': 2,
             'rpc-response-timeout': 60,
@@ -694,6 +700,7 @@ class NeutronAPIHooksTests(CharmTestCase):
             'service_host': None,
             'neutron-api-ready': 'no',
         }
+        self.is_qos_requested_and_valid.return_value = False
         self.get_dvr.return_value = False
         self.get_l3ha.return_value = True
         self.get_l2population.return_value = False
@@ -717,6 +724,7 @@ class NeutronAPIHooksTests(CharmTestCase):
             'rpc-response-timeout': 60,
             'report-interval': 30,
             'l2-population': False,
+            'enable-qos': False,
             'overlay-network-type': 'vxlan',
             'network-device-mtu': 1500,
             'enable-l3ha': True,
@@ -733,6 +741,7 @@ class NeutronAPIHooksTests(CharmTestCase):
             'service_host': None,
             'neutron-api-ready': 'no',
         }
+        self.is_qos_requested_and_valid.return_value = False
         self.get_dvr.return_value = True
         self.get_l3ha.return_value = True
         self.get_l2population.return_value = False
@@ -752,6 +761,7 @@ class NeutronAPIHooksTests(CharmTestCase):
             'neutron-security-groups': False,
             'enable-dvr': False,
             'enable-l3ha': False,
+            'enable-qos': False,
             'addr': '172.18.18.18',
             'polling-interval': 2,
             'rpc-response-timeout': 60,
@@ -771,6 +781,7 @@ class NeutronAPIHooksTests(CharmTestCase):
             'neutron-api-ready': 'no',
             'dns-domain': 'openstack.example.'
         }
+        self.is_qos_requested_and_valid.return_value = False
         self.get_dvr.return_value = False
         self.get_l3ha.return_value = False
         self.get_l2population.return_value = False

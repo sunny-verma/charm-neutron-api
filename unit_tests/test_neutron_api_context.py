@@ -442,9 +442,15 @@ class NeutronCCContextTest(CharmTestCase):
             'vlan_ranges': 'physnet1:1000:2000',
             'vni_ranges': '1001:2000',
             'extension_drivers': 'port_security',
+            'service_plugins': (
+                'neutron.services.l3_router.l3_router_plugin.L3RouterPlugin,'
+                'neutron.services.firewall.fwaas_plugin.FirewallPlugin,'
+                'neutron.services.loadbalancer.plugin.LoadBalancerPlugin,'
+                'neutron.services.vpn.plugin.VPNDriverPlugin,'
+                'neutron.services.metering.metering_plugin.MeteringPlugin'),
         }
         napi_ctxt = context.NeutronCCContext()
-        self.os_release.return_value = 'havana'
+        self.os_release.return_value = 'icehouse'
         with patch.object(napi_ctxt, '_ensure_packages'):
             self.assertEquals(ctxt_data, napi_ctxt())
 
@@ -528,9 +534,15 @@ class NeutronCCContextTest(CharmTestCase):
             'vni_ranges': '1001:2000,3001:4000',
             'network_providers': 'physnet2,physnet3',
             'extension_drivers': 'port_security',
+            'service_plugins': (
+                'neutron.services.l3_router.l3_router_plugin.L3RouterPlugin,'
+                'neutron.services.firewall.fwaas_plugin.FirewallPlugin,'
+                'neutron.services.loadbalancer.plugin.LoadBalancerPlugin,'
+                'neutron.services.vpn.plugin.VPNDriverPlugin,'
+                'neutron.services.metering.metering_plugin.MeteringPlugin'),
         }
         napi_ctxt = context.NeutronCCContext()
-        self.os_release.return_value = 'havana'
+        self.os_release.return_value = 'icehouse'
         with patch.object(napi_ctxt, '_ensure_packages'):
             self.assertEquals(ctxt_data, napi_ctxt())
 
@@ -540,10 +552,12 @@ class NeutronCCContextTest(CharmTestCase):
     def test_neutroncc_context_l3ha(self, _import, plugin, nm):
         plugin.return_value = None
         self.test_config.set('enable-l3ha', True)
+        self.test_config.set('enable-qos', False)
         self.test_config.set('overlay-network-type', 'gre')
         self.test_config.set('neutron-plugin', 'ovs')
         self.test_config.set('l2-population', False)
         self.os_release.return_value = 'juno'
+        self.maxDiff = None
         ctxt_data = {
             'debug': True,
             'enable_dvr': False,
@@ -573,6 +587,12 @@ class NeutronCCContextTest(CharmTestCase):
             'vlan_ranges': 'physnet1:1000:2000',
             'vni_ranges': '1001:2000',
             'extension_drivers': 'port_security',
+            'service_plugins': (
+                'neutron.services.l3_router.l3_router_plugin.L3RouterPlugin,'
+                'neutron.services.firewall.fwaas_plugin.FirewallPlugin,'
+                'neutron.services.loadbalancer.plugin.LoadBalancerPlugin,'
+                'neutron.services.vpn.plugin.VPNDriverPlugin,'
+                'neutron.services.metering.metering_plugin.MeteringPlugin'),
         }
         napi_ctxt = context.NeutronCCContext()
         with patch.object(napi_ctxt, '_ensure_packages'):
@@ -629,6 +649,7 @@ class NeutronCCContextTest(CharmTestCase):
             'vlan_ranges': 'physnet1:1000:2000',
             'vni_ranges': '1001:2000',
             'extension_drivers': 'port_security',
+            'service_plugins': 'router,firewall,lbaas,vpnaas,metering',
         }
         napi_ctxt = context.NeutronCCContext()
         self.os_release.return_value = 'kilo'
@@ -711,6 +732,87 @@ class NeutronCCContextTest(CharmTestCase):
         }
         for key in expect.iterkeys():
             self.assertEquals(napi_ctxt[key], expect[key])
+
+    @patch.object(context.NeutronCCContext, 'network_manager')
+    @patch.object(context.NeutronCCContext, 'plugin')
+    @patch('__builtin__.__import__')
+    def test_neutroncc_context_qos(self, _import, plugin, nm):
+        plugin.return_value = None
+        self.os_release.return_value = 'mitaka'
+        self.test_config.set('enable-qos', True)
+        self.test_config.set('enable-ml2-port-security', False)
+        napi_ctxt = context.NeutronCCContext()()
+        service_plugins = ('router,firewall,lbaas,vpnaas,metering,qos')
+        expect = {
+            'extension_drivers': 'qos',
+            'service_plugins': service_plugins,
+        }
+        for key in expect.iterkeys():
+            self.assertEqual(napi_ctxt[key], expect[key])
+
+    @patch.object(context.NeutronCCContext, 'network_manager')
+    @patch.object(context.NeutronCCContext, 'plugin')
+    @patch('__builtin__.__import__')
+    def test_neutroncc_context_service_plugins(self, _import, plugin, nm):
+        plugin.return_value = None
+        self.test_config.set('enable-qos', False)
+        self.test_config.set('enable-ml2-port-security', False)
+        # icehouse
+        self.os_release.return_value = 'icehouse'
+        service_plugins = (
+            'neutron.services.l3_router.l3_router_plugin.L3RouterPlugin,'
+            'neutron.services.firewall.fwaas_plugin.FirewallPlugin,'
+            'neutron.services.loadbalancer.plugin.LoadBalancerPlugin,'
+            'neutron.services.vpn.plugin.VPNDriverPlugin,'
+            'neutron.services.metering.metering_plugin.MeteringPlugin')
+        self.assertEqual(context.NeutronCCContext()()['service_plugins'],
+                         service_plugins)
+        # juno
+        self.os_release.return_value = 'juno'
+        service_plugins = (
+            'neutron.services.l3_router.l3_router_plugin.L3RouterPlugin,'
+            'neutron.services.firewall.fwaas_plugin.FirewallPlugin,'
+            'neutron.services.loadbalancer.plugin.LoadBalancerPlugin,'
+            'neutron.services.vpn.plugin.VPNDriverPlugin,'
+            'neutron.services.metering.metering_plugin.MeteringPlugin')
+        self.assertEqual(context.NeutronCCContext()()['service_plugins'],
+                         service_plugins)
+        # kilo
+        self.os_release.return_value = 'kilo'
+        service_plugins = 'router,firewall,lbaas,vpnaas,metering'
+        self.assertEqual(context.NeutronCCContext()()['service_plugins'],
+                         service_plugins)
+        # liberty
+        self.os_release.return_value = 'liberty'
+        service_plugins = 'router,firewall,lbaas,vpnaas,metering'
+        self.assertEqual(context.NeutronCCContext()()['service_plugins'],
+                         service_plugins)
+        # mitaka
+        self.os_release.return_value = 'mitaka'
+        service_plugins = 'router,firewall,lbaas,vpnaas,metering'
+        self.assertEqual(context.NeutronCCContext()()['service_plugins'],
+                         service_plugins)
+        # newton
+        self.os_release.return_value = 'newton'
+        service_plugins = (
+            'router,firewall,vpnaas,metering,'
+            'neutron_lbaas.services.loadbalancer.plugin.LoadBalancerPluginv2')
+        self.assertEqual(context.NeutronCCContext()()['service_plugins'],
+                         service_plugins)
+        # ocata
+        self.os_release.return_value = 'ocata'
+        service_plugins = (
+            'router,firewall,vpnaas,metering,'
+            'neutron_lbaas.services.loadbalancer.plugin.LoadBalancerPluginv2')
+        self.assertEqual(context.NeutronCCContext()()['service_plugins'],
+                         service_plugins)
+        # pike
+        self.os_release.return_value = 'pike'
+        service_plugins = (
+            'router,firewall,metering,'
+            'neutron_lbaas.services.loadbalancer.plugin.LoadBalancerPluginv2')
+        self.assertEqual(context.NeutronCCContext()()['service_plugins'],
+                         service_plugins)
 
 
 class EtcdContextTest(CharmTestCase):

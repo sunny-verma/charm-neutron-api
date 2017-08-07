@@ -94,6 +94,7 @@ from neutron_api_context import (
     get_l2population,
     get_overlay_network_type,
     IdentityServiceContext,
+    is_qos_requested_and_valid,
     EtcdContext,
 )
 
@@ -484,6 +485,7 @@ def neutron_plugin_api_relation_joined(rid=None):
             'l2-population': get_l2population(),
             'enable-dvr': get_dvr(),
             'enable-l3ha': get_l3ha(),
+            'enable-qos': is_qos_requested_and_valid(),
             'overlay-network-type': get_overlay_network_type(),
             'addr': unit_get('private-address'),
             'polling-interval': config('polling-interval'),
