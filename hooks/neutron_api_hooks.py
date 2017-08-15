@@ -41,7 +41,6 @@ from charmhelpers.core.hookenv import (
 from charmhelpers.core.host import (
     mkdir,
     service_reload,
-    service_restart,
 )
 
 from charmhelpers.fetch import (
@@ -86,6 +85,7 @@ from neutron_api_utils import (
     restart_map,
     services,
     setup_ipv6,
+    check_local_db_actions_complete,
 )
 from neutron_api_context import (
     get_dns_domain,
@@ -134,22 +134,29 @@ CONFIGS = register_configs()
 
 
 def conditional_neutron_migration():
+    """Initialise neutron database if not already done so.
+
+    Runs neutron-manage to initialize a new database or migrate existing and
+    restarts services to ensure that the changes are picked up. The first
+    (leader) unit to perform this action should have broadcast this information
+    to its peers so first we check whether this has already occurred.
+    """
     if CompareOpenStackReleases(os_release('neutron-server')) <= 'icehouse':
         log('Not running neutron database migration as migrations are handled '
             'by the neutron-server process.')
         return
-    if is_elected_leader(CLUSTER_RES):
-        allowed_units = relation_get('allowed_units')
-        if allowed_units and local_unit() in allowed_units.split():
-            migrate_neutron_database()
-            if not is_unit_paused_set():
-                service_restart('neutron-server')
-        else:
-            log('Not running neutron database migration, either no'
-                ' allowed_units or this unit is not present')
-            return
-    else:
+
+    if not is_elected_leader(CLUSTER_RES):
         log('Not running neutron database migration, not leader')
+        return
+
+    allowed_units = relation_get('allowed_units')
+    if not (allowed_units and local_unit() in allowed_units.split()):
+        log('Not running neutron database migration, either no '
+            'allowed_units or this unit is not present')
+        return
+
+    migrate_neutron_database()
 
 
 def configure_https():
@@ -534,12 +541,16 @@ def cluster_joined(relation_id=None):
 
     relation_set(relation_id=relation_id, relation_settings=settings)
 
+    if not relation_id:
+        check_local_db_actions_complete()
+
 
 @hooks.hook('cluster-relation-changed',
             'cluster-relation-departed')
 @restart_on_change(restart_map(), stopstart=True)
 def cluster_changed():
     CONFIGS.write_all()
+    check_local_db_actions_complete()
 
 
 @hooks.hook('ha-relation-joined')

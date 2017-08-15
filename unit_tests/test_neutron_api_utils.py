@@ -327,7 +327,8 @@ class TestNeutronAPIUtils(CharmTestCase):
                                             fatal=True)
         configs.set_release.assert_called_with(openstack_release='juno')
         stamp_neutron_db.assert_called_with('icehouse')
-        migrate_neutron_db.assert_called_with()
+        calls = [call(upgrade=True)]
+        migrate_neutron_db.assert_has_calls(calls)
 
     @patch.object(charmhelpers.contrib.openstack.utils,
                   'get_os_codename_install_source')
@@ -619,7 +620,120 @@ class TestNeutronAPIUtils(CharmTestCase):
                'icehouse']
         self.subprocess.check_output.assert_called_with(cmd)
 
-    def test_migrate_neutron_database(self):
+    @patch.object(nutils, 'relation_set')
+    @patch.object(nutils, 'is_db_initialised', lambda: False)
+    @patch.object(nutils, 'relation_get')
+    @patch.object(nutils, 'local_unit', lambda *args: 'unit/0')
+    def test_check_local_db_actions_complete_by_self(self, mock_relation_get,
+                                                     mock_relation_set):
+        mock_relation_get.return_value = {}
+        nutils.check_local_db_actions_complete()
+        self.assertFalse(mock_relation_set.called)
+
+        mock_relation_get.return_value = {nutils.NEUTRON_DB_INIT_RKEY:
+                                          'unit/0-1234'}
+        nutils.check_local_db_actions_complete()
+        self.assertFalse(mock_relation_set.called)
+
+    @patch.object(nutils, 'relation_ids')
+    @patch.object(nutils, 'relation_set')
+    @patch.object(nutils, 'relation_get')
+    @patch.object(nutils, 'is_db_initialised')
+    @patch.object(nutils, 'local_unit', lambda *args: 'unit/0')
+    def test_check_local_db_actions_complete(self,
+                                             mock_is_db_initialised,
+                                             mock_relation_get,
+                                             mock_relation_set,
+                                             mock_relation_ids):
+        shared_db_rel_id = 'shared-db:1'
+        mock_relation_ids.return_value = [shared_db_rel_id]
+        mock_is_db_initialised.return_value = True
+        r_settings = {}
+
+        def fake_relation_get(unit=None, rid=None, attribute=None):
+            if attribute:
+                return r_settings.get(attribute)
+            else:
+                return r_settings
+
+        mock_relation_get.side_effect = fake_relation_get
+        nutils.check_local_db_actions_complete()
+        self.assertFalse(mock_relation_set.called)
+        init_db_val = 'unit/1-{}-1234'.format(shared_db_rel_id)
+        r_settings = {nutils.NEUTRON_DB_INIT_RKEY: init_db_val}
+        nutils.check_local_db_actions_complete()
+        calls = [call(**{nutils.NEUTRON_DB_INIT_ECHO_RKEY: init_db_val})]
+        mock_relation_set.assert_has_calls(calls)
+        self.service_restart.assert_called_with('neutron-server')
+
+    @patch.object(nutils, 'local_unit')
+    @patch.object(nutils, 'relation_get')
+    @patch.object(nutils, 'relation_ids')
+    @patch.object(nutils, 'related_units')
+    def test_is_db_initisalised_false(self, mock_related_units,
+                                      mock_relation_ids,
+                                      mock_relation_get,
+                                      mock_local_unit):
+        shared_db_rel_id = 'shared-db:1'
+        mock_relation_ids.return_value = [shared_db_rel_id]
+        settings = {'0': {}, '1': {}}
+
+        def mock_rel_get(unit=None, rid=None, attribute=None):
+            if not unit:
+                unit = '0'
+
+            if attribute:
+                return settings[unit].get(attribute)
+
+            return settings[unit]
+
+        mock_local_unit.return_value = '0'
+        mock_relation_get.side_effect = mock_rel_get
+        mock_related_units.return_value = ['1']
+        mock_relation_ids.return_value = ['cluster:1']
+        self.assertFalse(nutils.is_db_initialised())
+
+    @patch.object(nutils, 'local_unit')
+    @patch.object(nutils, 'relation_get')
+    @patch.object(nutils, 'relation_ids')
+    @patch.object(nutils, 'related_units')
+    def test_is_db_initisalised_true(self, mock_related_units,
+                                     mock_relation_ids,
+                                     mock_relation_get,
+                                     mock_local_unit):
+        shared_db_rel_id = 'shared-db:1'
+        init_db_val = 'unit/1-{}-1234'.format(shared_db_rel_id)
+        mock_relation_ids.return_value = [shared_db_rel_id]
+        settings = {'0': {nutils.NEUTRON_DB_INIT_RKEY: init_db_val},
+                    '1': {nutils.NEUTRON_DB_INIT_ECHO_RKEY: init_db_val}}
+
+        def mock_rel_ids(name):
+            if name == 'cluster':
+                return 'cluster:1'
+            elif name == 'shared-db':
+                return 'shared-db:1'
+
+            raise Exception("Uknown relation '{}'".format(name))
+
+        def mock_rel_get(unit=None, rid=None, attribute=None):
+            if not unit:
+                unit = '0'
+
+            if attribute:
+                return settings[unit].get(attribute)
+
+            return settings[unit]
+
+        mock_relation_ids.side_effect = mock_rel_ids
+        mock_local_unit.return_value = '0'
+        mock_relation_get.side_effect = mock_rel_get
+        mock_related_units.return_value = ['1']
+        self.assertTrue(nutils.is_db_initialised())
+
+    @patch.object(nutils, 'relation_ids')
+    @patch.object(nutils, 'is_db_initialised')
+    def test_migrate_neutron_database(self, mock_is_db_initd, mock_rel_ids):
+        mock_is_db_initd.return_value = False
         nutils.migrate_neutron_database()
         cmd = ['neutron-db-manage',
                '--config-file', '/etc/neutron/neutron.conf',

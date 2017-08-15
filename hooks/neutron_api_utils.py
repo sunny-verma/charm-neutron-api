@@ -18,6 +18,7 @@ from functools import partial
 import os
 import shutil
 import subprocess
+import uuid
 import glob
 from base64 import b64encode
 from charmhelpers.contrib.openstack import context, templating
@@ -55,7 +56,12 @@ from charmhelpers.core.hookenv import (
     charm_dir,
     config,
     log,
+    DEBUG,
     relation_ids,
+    related_units,
+    relation_get,
+    relation_set,
+    local_unit,
 )
 
 from charmhelpers.fetch import (
@@ -229,6 +235,90 @@ LIBERTY_RESOURCE_MAP = OrderedDict([
         'contexts': [],
     }),
 ])
+
+
+NEUTRON_DB_INIT_RKEY = 'neutron-db-initialised'
+NEUTRON_DB_INIT_ECHO_RKEY = 'neutron-db-initialised-echo'
+
+
+def is_db_initialised(cluster_rid=None):
+    """
+    Check whether a db intialisation has been performed by any peer unit.
+
+    We base our decision on whether we or any of our peers has previously
+    sent or echoed an initialisation notification.
+
+    @param cluster_rid: current relation id. If none provided, all cluster
+                        relation ids will be checked.
+    @return: True if there has been a db initialisation otherwise False.
+    """
+    if cluster_rid:
+        rids = [cluster_rid]
+    else:
+        rids = relation_ids('cluster')
+
+    shared_db_rel_id = (relation_ids('shared-db') or [None])[0]
+    if not shared_db_rel_id:
+        return False
+
+    for c_rid in rids:
+        units = related_units(relid=c_rid) + [local_unit()]
+        for unit in units:
+            settings = relation_get(unit=unit, rid=c_rid) or {}
+            for key in [NEUTRON_DB_INIT_RKEY, NEUTRON_DB_INIT_ECHO_RKEY]:
+                if shared_db_rel_id in settings.get(key, ''):
+                    return True
+
+    return False
+
+
+def is_new_dbinit_notification(init_id, echoed_init_id):
+    """Returns True if we have a received a new db initialisation notification
+    from a peer unit and we have not previously echoed it to indicate that we
+    have already performed the necessary actions as result.
+
+    Initialisation notification is expected to be of the format:
+
+    <unit-id-leader-unit>-<shared-db-rel-id>-<uuid>
+
+    @param init_db: received initialisation notification.
+    @param echoed_init_db: value currently set for the echo key.
+    @return: True if new notification and False if not.
+    """
+    shared_db_rel_id = (relation_ids('shared-db') or [None])[0]
+    return (shared_db_rel_id and init_id and
+            (local_unit() not in init_id) and
+            (shared_db_rel_id in init_id) and
+            (echoed_init_id != init_id))
+
+
+def check_local_db_actions_complete():
+    """Check if we have received db init'd notification and restart services
+    if we have not already.
+
+    NOTE: this must only be called from peer relation context.
+    """
+    if not is_db_initialised():
+        return
+
+    settings = relation_get() or {}
+    if settings:
+        init_id = settings.get(NEUTRON_DB_INIT_RKEY)
+        echoed_init_id = relation_get(unit=local_unit(),
+                                      attribute=NEUTRON_DB_INIT_ECHO_RKEY)
+
+        # If we have received an init notification from a peer unit
+        # (assumed to be the leader) then restart neutron-api and echo the
+        # notification and don't restart again unless we receive a new
+        # (different) notification.
+        if is_new_dbinit_notification(init_id, echoed_init_id):
+            if not is_unit_paused_set():
+                log("Restarting neutron services following db "
+                    "initialisation", level=DEBUG)
+                service_restart('neutron-server')
+
+            # Echo notification
+            relation_set(**{NEUTRON_DB_INIT_ECHO_RKEY: init_id})
 
 
 def api_port(service):
@@ -483,7 +573,7 @@ def do_openstack_upgrade(configs):
         # Stamping seems broken and unnecessary in liberty (Bug #1536675)
         if CompareOpenStackReleases(os_release('neutron-common')) < 'liberty':
             stamp_neutron_database(cur_os_rel)
-        migrate_neutron_database()
+        migrate_neutron_database(upgrade=True)
 
 
 def stamp_neutron_database(release):
@@ -531,8 +621,13 @@ def nuage_vsp_juno_neutron_migration():
         raise Exception(e)
 
 
-def migrate_neutron_database():
+def migrate_neutron_database(upgrade=False):
     '''Initializes a new database or upgrades an existing database.'''
+
+    if not upgrade and is_db_initialised():
+        log("Database is already initialised.", level=DEBUG)
+        return
+
     log('Migrating the neutron database.')
     if(os_release('neutron-server') == 'juno' and
        config('neutron-plugin') == 'vsp'):
@@ -547,6 +642,21 @@ def migrate_neutron_database():
                'upgrade',
                'head']
         subprocess.check_output(cmd)
+
+    cluster_rids = relation_ids('cluster')
+    if cluster_rids:
+        # Notify peers so that services get restarted
+        log("Notifying peer(s) that db is initialised and restarting services",
+            level=DEBUG)
+        for r_id in cluster_rids:
+            if not is_unit_paused_set():
+                service_restart('neutron-server')
+
+            # Notify peers that tey should also restart their services
+            shared_db_rel_id = (relation_ids('shared-db') or [None])[0]
+            id = "{}-{}-{}".format(local_unit(), shared_db_rel_id,
+                                   uuid.uuid4())
+            relation_set(relation_id=r_id, **{NEUTRON_DB_INIT_RKEY: id})
 
 
 def get_topics():
