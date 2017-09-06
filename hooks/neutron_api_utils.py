@@ -559,7 +559,7 @@ def do_openstack_upgrade(configs):
     ]
     apt_update(fatal=True)
     apt_upgrade(options=dpkg_opts, fatal=True, dist=True)
-    pkgs = determine_packages(new_os_rel)
+    pkgs = determine_packages(new_src)
     # Sort packages just to make unit tests easier
     pkgs.sort()
     apt_install(packages=pkgs,
