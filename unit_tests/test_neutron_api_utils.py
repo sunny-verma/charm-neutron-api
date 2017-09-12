@@ -281,7 +281,7 @@ class TestNeutronAPIUtils(CharmTestCase):
     def test_keystone_ca_cert_b64_no_cert_file(self, _isfile):
         _isfile.return_value = False
         cert = nutils.keystone_ca_cert_b64()
-        self.assertEquals(cert, None)
+        self.assertEqual(cert, None)
 
     @patch('os.path.isfile')
     def test_keystone_ca_cert_b64(self, _isfile):
@@ -417,7 +417,7 @@ class TestNeutronAPIUtils(CharmTestCase):
         creds = {}
         IdentityServiceContext.return_value = \
             DummyIdentityServiceContext(return_value=creds)
-        self.assertEquals(nutils.get_neutron_client(), None)
+        self.assertEqual(nutils.get_neutron_client(), None)
 
     @patch.object(nutils, 'get_neutron_client')
     def test_router_feature_present_keymissing(self, get_neutron_client):
@@ -437,7 +437,7 @@ class TestNeutronAPIUtils(CharmTestCase):
             ]
         }
         get_neutron_client.list_routers.return_value = routers
-        self.assertEquals(nutils.router_feature_present('ha'), False)
+        self.assertEqual(nutils.router_feature_present('ha'), False)
 
     @patch.object(nutils, 'get_neutron_client')
     def test_router_feature_present_keyfalse(self, get_neutron_client):
@@ -460,7 +460,7 @@ class TestNeutronAPIUtils(CharmTestCase):
         dummy_client = MagicMock()
         dummy_client.list_routers.return_value = routers
         get_neutron_client.return_value = dummy_client
-        self.assertEquals(nutils.router_feature_present('ha'), False)
+        self.assertEqual(nutils.router_feature_present('ha'), False)
 
     @patch.object(nutils, 'get_neutron_client')
     def test_router_feature_present_keytrue(self, get_neutron_client):
@@ -484,26 +484,26 @@ class TestNeutronAPIUtils(CharmTestCase):
         dummy_client = MagicMock()
         dummy_client.list_routers.return_value = routers
         get_neutron_client.return_value = dummy_client
-        self.assertEquals(nutils.router_feature_present('ha'), True)
+        self.assertEqual(nutils.router_feature_present('ha'), True)
 
     @patch.object(nutils, 'get_neutron_client')
     def test_neutron_ready(self, get_neutron_client):
         dummy_client = MagicMock()
         dummy_client.list_routers.return_value = []
         get_neutron_client.return_value = dummy_client
-        self.assertEquals(nutils.neutron_ready(), True)
+        self.assertEqual(nutils.neutron_ready(), True)
 
     @patch.object(nutils, 'get_neutron_client')
     def test_neutron_ready_noclient(self, get_neutron_client):
         get_neutron_client.return_value = None
-        self.assertEquals(nutils.neutron_ready(), False)
+        self.assertEqual(nutils.neutron_ready(), False)
 
     @patch.object(nutils, 'get_neutron_client')
     def test_neutron_ready_clientexception(self, get_neutron_client):
         dummy_client = MagicMock()
         dummy_client.list_routers.side_effect = Exception('Boom!')
         get_neutron_client.return_value = dummy_client
-        self.assertEquals(nutils.neutron_ready(), False)
+        self.assertEqual(nutils.neutron_ready(), False)
 
     @patch.object(nutils, 'git_install_requested')
     @patch.object(nutils, 'git_clone_and_install')
@@ -539,12 +539,12 @@ class TestNeutronAPIUtils(CharmTestCase):
             call('/var/log/neutron', owner='neutron',
                  group='neutron', perms=0755, force=False),
         ]
-        self.assertEquals(mkdir.call_args_list, expected)
+        self.assertEqual(mkdir.call_args_list, expected)
         expected = [
             call('/var/log/neutron/server.log', '', owner='neutron',
                  group='neutron', perms=0600),
         ]
-        self.assertEquals(write_file.call_args_list, expected)
+        self.assertEqual(write_file.call_args_list, expected)
 
     @patch('os.path.join')
     @patch('os.path.exists')
@@ -583,11 +583,11 @@ class TestNeutronAPIUtils(CharmTestCase):
                  '/etc/init/neutron-server.conf',
                  neutron_api_context, perms=0o644),
         ]
-        self.assertEquals(self.render.call_args_list, expected)
+        self.assertEqual(self.render.call_args_list, expected)
         expected = [
             call('neutron-server'),
         ]
-        self.assertEquals(self.service_restart.call_args_list, expected)
+        self.assertEqual(self.service_restart.call_args_list, expected)
 
     @patch('os.listdir')
     @patch('os.path.join')
@@ -609,7 +609,7 @@ class TestNeutronAPIUtils(CharmTestCase):
             call('git/neutron-server.init.in.template', 'joined-string',
                  {'daemon_path': 'joined-string'}, perms=420)
         ]
-        self.assertEquals(self.render.call_args_list, expected)
+        self.assertEqual(self.render.call_args_list, expected)
 
     def test_stamp_neutron_database(self):
         nutils.stamp_neutron_database('icehouse')
