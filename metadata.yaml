@@ -20,6 +20,7 @@ extra-bindings:
   internal:
 series:
   - xenial
+  - artful
   - zesty
   - trusty
 provides:
