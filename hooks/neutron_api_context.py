@@ -47,6 +47,7 @@ TENANT_NET_TYPES = [VXLAN, GRE, VLAN, FLAT, LOCAL]
 
 EXTENSION_DRIVER_PORT_SECURITY = 'port_security'
 EXTENSION_DRIVER_DNS = 'dns'
+EXTENSION_DRIVER_QOS = 'qos'
 
 ETC_NEUTRON = '/etc/neutron'
 
@@ -199,6 +200,23 @@ def get_ml2_mechanism_drivers():
     if (config('enable-sriov') and cmp_release >= 'kilo'):
         mechanism_drivers.append('sriovnicswitch')
     return ','.join(mechanism_drivers)
+
+
+def is_qos_requested_and_valid():
+    """Check whether QoS should be enabled by checking whether it has been
+       requested and, if it has, is it supported in the current configuration
+    """
+
+    if config('enable-qos'):
+        if CompareOpenStackReleases(os_release('neutron-server')) < 'mitaka':
+            msg = ("The enable-qos option is only supported on mitaka or "
+                   "later")
+            log(msg, ERROR)
+            return False
+        else:
+            return True
+    else:
+        return False
 
 
 class ApacheSSLContext(context.ApacheSSLContext):
@@ -391,6 +409,10 @@ class NeutronCCContext(context.NeutronContext):
         if dns_domain:
             extension_drivers.append(EXTENSION_DRIVER_DNS)
             ctxt['dns_domain'] = dns_domain
+
+        if is_qos_requested_and_valid():
+            extension_drivers.append(EXTENSION_DRIVER_QOS)
+
         if extension_drivers:
             ctxt['extension_drivers'] = ','.join(extension_drivers)
 
@@ -411,6 +433,47 @@ class NeutronCCContext(context.NeutronContext):
                     ','.join(pci_vendor_devs.split())
 
         ctxt['mechanism_drivers'] = get_ml2_mechanism_drivers()
+
+        if config('neutron-plugin') in ['ovs', 'ml2', 'Calico']:
+            ctxt['service_plugins'] = []
+            service_plugins = {
+                'icehouse': [
+                    ('neutron.services.l3_router.l3_router_plugin.'
+                     'L3RouterPlugin'),
+                    'neutron.services.firewall.fwaas_plugin.FirewallPlugin',
+                    'neutron.services.loadbalancer.plugin.LoadBalancerPlugin',
+                    'neutron.services.vpn.plugin.VPNDriverPlugin',
+                    ('neutron.services.metering.metering_plugin.'
+                     'MeteringPlugin')],
+                'juno': [
+                    ('neutron.services.l3_router.l3_router_plugin.'
+                     'L3RouterPlugin'),
+                    'neutron.services.firewall.fwaas_plugin.FirewallPlugin',
+                    'neutron.services.loadbalancer.plugin.LoadBalancerPlugin',
+                    'neutron.services.vpn.plugin.VPNDriverPlugin',
+                    ('neutron.services.metering.metering_plugin.'
+                     'MeteringPlugin')],
+                'kilo': ['router', 'firewall', 'lbaas', 'vpnaas', 'metering'],
+                'liberty': ['router', 'firewall', 'lbaas', 'vpnaas',
+                            'metering'],
+                'mitaka': ['router', 'firewall', 'lbaas', 'vpnaas',
+                           'metering'],
+                'newton': ['router', 'firewall', 'vpnaas', 'metering',
+                           ('neutron_lbaas.services.loadbalancer.plugin.'
+                            'LoadBalancerPluginv2')],
+                'ocata': ['router', 'firewall', 'vpnaas', 'metering',
+                          ('neutron_lbaas.services.loadbalancer.plugin.'
+                           'LoadBalancerPluginv2')],
+                'pike': ['router', 'firewall', 'metering',
+                         ('neutron_lbaas.services.loadbalancer.plugin.'
+                          'LoadBalancerPluginv2')],
+            }
+            ctxt['service_plugins'] = service_plugins.get(
+                release, service_plugins['pike'])
+
+            if is_qos_requested_and_valid():
+                ctxt['service_plugins'].append('qos')
+            ctxt['service_plugins'] = ','.join(ctxt['service_plugins'])
 
         return ctxt
 

@@ -660,6 +660,39 @@ class NeutronAPIBasicDeployment(OpenStackAmuletDeployment):
                 message = "ml2 config error: {}".format(ret)
                 amulet.raise_status(amulet.FAIL, msg=message)
 
+    def test_400_enable_qos(self):
+        """Check qos settings"""
+        if self._get_openstack_release() >= self.trusty_mitaka:
+            u.log.debug('Checking QoS setting in neutron-api '
+                        'neutron-openvswitch relation data...')
+            unit = self.neutron_api_sentry
+            relation = ['neutron-plugin-api',
+                        'neutron-openvswitch:neutron-plugin-api']
+
+            set_default = {'enable-qos': 'False'}
+            set_alternate = {'enable-qos': 'True'}
+            self.d.configure('neutron-api', set_alternate)
+
+            relation_data = unit.relation(relation[0], relation[1])
+            if relation_data['enable-qos'] != 'True':
+                message = ("enable-qos setting not set properly on "
+                           "neutron-plugin-api relation")
+                amulet.raise_status(amulet.FAIL, msg=message)
+
+            qos_plugin = 'qos'
+            config = u._get_config(unit, '/etc/neutron/neutron.conf')
+            service_plugins = config.get(
+                'DEFAULT',
+                'service_plugins').split(',')
+            if qos_plugin not in service_plugins:
+                message = "{} not in service_plugins".format(qos_plugin)
+                amulet.raise_status(amulet.FAIL, msg=message)
+
+            u.log.debug('Setting QoS back to {}'.format(
+                set_default['enable-qos']))
+            self.d.configure('neutron-api', set_default)
+            u.log.debug('OK')
+
     def test_900_restart_on_config_change(self):
         """Verify that the specified services are restarted when the
         config is changed."""
