@@ -27,6 +27,7 @@ from charmhelpers.core.hookenv import (
     is_relation_made,
     local_unit,
     log,
+    DEBUG,
     ERROR,
     WARNING,
     relation_get,
@@ -99,6 +100,7 @@ from neutron_api_context import (
 
 from charmhelpers.contrib.hahelpers.cluster import (
     get_hacluster_config,
+    is_clustered,
     is_elected_leader,
 )
 
@@ -395,6 +397,10 @@ def relation_broken():
 
 @hooks.hook('identity-service-relation-joined')
 def identity_joined(rid=None, relation_trigger=False):
+    if config('vip') and not is_clustered():
+        log('Defering registration until clustered', level=DEBUG)
+        return
+
     public_url = '{}:{}'.format(canonical_url(CONFIGS, PUBLIC),
                                 api_port('neutron-server'))
     admin_url = '{}:{}'.format(canonical_url(CONFIGS, ADMIN),

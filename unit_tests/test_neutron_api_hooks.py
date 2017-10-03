@@ -66,6 +66,7 @@ TO_PATCH = [
     'get_l2population',
     'get_overlay_network_type',
     'git_install',
+    'is_clustered',
     'is_elected_leader',
     'is_relation_made',
     'log',
@@ -449,6 +450,12 @@ class NeutronAPIHooksTests(CharmTestCase):
             relation_id=None,
             relation_settings=_endpoints
         )
+
+    def test_identity_joined_partial_cluster(self):
+        self.is_clustered.return_value = False
+        self.test_config.set('vip', '10.0.0.10')
+        hooks.identity_joined()
+        self.assertFalse(self.relation_set.called)
 
     @patch('charmhelpers.contrib.openstack.ip.service_name',
            lambda *args: 'neutron-api')
