@@ -151,7 +151,7 @@ class NeutronAPIHooksTests(CharmTestCase):
         _port_calls = [call(port) for port in _ports]
         self.determine_packages.return_value = _pkgs
         self.determine_ports.return_value = _ports
-        self._call_hook('install.real')
+        self._call_hook('install')
         self.configure_installation_source.assert_called_with(
             'distro'
         )
@@ -174,7 +174,7 @@ class NeutronAPIHooksTests(CharmTestCase):
         _port_calls = [call(port) for port in _ports]
         self.determine_packages.return_value = _pkgs
         self.determine_ports.return_value = _ports
-        self._call_hook('install.real')
+        self._call_hook('install')
         self.configure_installation_source.assert_called_with(
             'distro'
         )
@@ -210,7 +210,7 @@ class NeutronAPIHooksTests(CharmTestCase):
         self.test_config.set('openstack-origin', repo)
         self.test_config.set('openstack-origin-git', projects_yaml)
         codename.return_value = 'juno'
-        self._call_hook('install.real')
+        self._call_hook('install')
         self.assertTrue(self.execd_preinstall.called)
         self.configure_installation_source.assert_called_with(repo)
         self.apt_update.assert_called_with(fatal=True)
@@ -251,22 +251,16 @@ class NeutronAPIHooksTests(CharmTestCase):
         self.neutron_ready.return_value = True
         self.dvr_router_present.return_value = True
         self.get_dvr.return_value = False
-        with self.assertRaises(Exception) as context:
+        with self.assertRaises(Exception):
             self._call_hook('config-changed')
-        self.assertEqual(context.exception.message,
-                         'Cannot disable dvr while dvr enabled routers exist.'
-                         ' Please remove any distributed routers')
 
     def test_config_changed_nol3ha_harouters(self):
         self.neutron_ready.return_value = True
         self.dvr_router_present.return_value = False
         self.l3ha_router_present.return_value = True
         self.get_l3ha.return_value = False
-        with self.assertRaises(Exception) as context:
+        with self.assertRaises(Exception):
             self._call_hook('config-changed')
-        self.assertEqual(context.exception.message,
-                         'Cannot disable Router HA while ha enabled routers'
-                         ' exist. Please remove any ha routers')
 
     @patch.object(utils, 'get_os_codename_install_source')
     @patch.object(hooks, 'configure_https')
@@ -372,12 +366,8 @@ class NeutronAPIHooksTests(CharmTestCase):
 
     def test_db_joined_with_postgresql(self):
         self.is_relation_made.return_value = True
-
-        with self.assertRaises(Exception) as context:
+        with self.assertRaises(Exception):
             hooks.db_joined()
-        self.assertEqual(context.exception.message,
-                         'Attempting to associate a mysql database when there '
-                         'is already associated a postgresql one')
 
     def test_postgresql_db_joined(self):
         self.unit_get.return_value = 'myhostname'
@@ -389,12 +379,8 @@ class NeutronAPIHooksTests(CharmTestCase):
 
     def test_postgresql_joined_with_db(self):
         self.is_relation_made.return_value = True
-
-        with self.assertRaises(Exception) as context:
+        with self.assertRaises(Exception):
             hooks.pgsql_neutron_db_joined()
-        self.assertEqual(context.exception.message,
-                         'Attempting to associate a postgresql database when'
-                         ' there is already associated a mysql one')
 
     @patch.object(hooks, 'neutron_plugin_api_subordinate_relation_joined')
     @patch.object(hooks, 'conditional_neutron_migration')

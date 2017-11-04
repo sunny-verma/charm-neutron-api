@@ -20,6 +20,7 @@ import shutil
 import subprocess
 import uuid
 import glob
+import yaml
 from base64 import b64encode
 from charmhelpers.contrib.openstack import context, templating
 from charmhelpers.contrib.openstack.neutron import (
@@ -511,14 +512,14 @@ def register_configs(release=None):
     release = release or os_release('neutron-common')
     configs = templating.OSConfigRenderer(templates_dir=TEMPLATES,
                                           openstack_release=release)
-    for cfg, rscs in resource_map().iteritems():
+    for cfg, rscs in resource_map().items():
         configs.register(cfg, rscs['contexts'])
     return configs
 
 
 def restart_map():
     return OrderedDict([(cfg, v['services'])
-                        for cfg, v in resource_map().iteritems()
+                        for cfg, v in resource_map().items()
                         if v['services']])
 
 
@@ -686,22 +687,43 @@ def setup_ipv6():
         apt_install('haproxy/trusty-backports', fatal=True)
 
 
+class FakeNeutronClient(object):
+    '''Fake wrapper for Neutron Client'''
+
+    def __init__(self, username, password, tenant_name,
+                 auth_url, region_name):
+        self.env = {
+            'OS_USERNAME': username,
+            'OS_PASSWORD': password,
+            'OS_TENANT_NAME': tenant_name,
+            'OS_AUTH_URL': auth_url,
+            'OS_REGION': region_name,
+        }
+
+    def list_routers(self):
+        cmd = ['neutron', 'router-list', '-f', 'yaml']
+        try:
+            routers = subprocess.check_output(
+                cmd, env=self.env).decode('UTF-8')
+            return {'routers': yaml.load(routers)}
+        except subprocess.CalledProcessError:
+            return {'routers': []}
+
+
 def get_neutron_client():
     ''' Return a neutron client if possible '''
     env = neutron_api_context.IdentityServiceContext()()
     if not env:
         log('Unable to check resources at this time')
-        return
+        return None
 
-    auth_url = '%(auth_protocol)s://%(auth_host)s:%(auth_port)s/v2.0' % env
-    # Late import to avoid install hook failures when pkg hasnt been installed
-    from neutronclient.v2_0 import client
-    neutron_client = client.Client(username=env['admin_user'],
-                                   password=env['admin_password'],
-                                   tenant_name=env['admin_tenant_name'],
-                                   auth_url=auth_url,
-                                   region_name=env['region'])
-    return neutron_client
+    auth_url = '{auth_protocol}://{auth_host}:{auth_port}/v2.0'.format(**env)
+
+    return FakeNeutronClient(username=env['admin_user'],
+                             password=env['admin_password'],
+                             tenant_name=env['admin_tenant_name'],
+                             auth_url=auth_url,
+                             region_name=env['region'])
 
 
 def router_feature_present(feature):
@@ -758,10 +780,10 @@ def git_pre_install():
     add_user_to_group('neutron', 'neutron')
 
     for d in dirs:
-        mkdir(d, owner='neutron', group='neutron', perms=0755, force=False)
+        mkdir(d, owner='neutron', group='neutron', perms=0o755, force=False)
 
     for l in logs:
-        write_file(l, '', owner='neutron', group='neutron', perms=0600)
+        write_file(l, '', owner='neutron', group='neutron', perms=0o600)
 
 
 def git_post_install(projects_yaml):
