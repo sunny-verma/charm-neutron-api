@@ -368,9 +368,11 @@ class HAProxyContextTest(CharmTestCase):
             'default_backend': '10.10.10.11',
             'service_ports': service_ports,
             'neutron_bind_port': 9686,
+            'ipv6_enabled': True,
         }
         _import().api_port.return_value = 9696
         hap_ctxt = context.HAProxyContext()
+        self.maxDiff = None
         self.assertEqual(hap_ctxt(), ctxt_data)
         _open.assert_called_with('/etc/default/haproxy', 'w')
 
