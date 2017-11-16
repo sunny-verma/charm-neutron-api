@@ -127,7 +127,7 @@ class TestNeutronAPIUtils(CharmTestCase):
         pkg_list = nutils.determine_packages()
         expect = deepcopy(nutils.BASE_PACKAGES)
         expect.extend(['neutron-server', 'neutron-plugin-ml2'])
-        self.assertItemsEqual(pkg_list, expect)
+        self.assertEqual(sorted(pkg_list), sorted(expect))
 
     @patch.object(nutils, 'git_install_requested')
     def test_determine_vsp_packages(self, git_requested):
@@ -141,7 +141,7 @@ class TestNeutronAPIUtils(CharmTestCase):
         expect = deepcopy(nutils.BASE_PACKAGES)
         expect.extend(['neutron-server', 'neutron-plugin-nuage',
                        'python-nuagenetlib', 'nuage-neutron'])
-        self.assertItemsEqual(pkg_list, expect)
+        self.assertEqual(sorted(pkg_list), sorted(expect))
 
     @patch.object(nutils, 'git_install_requested')
     def test_determine_packages_kilo(self, git_requested):
@@ -153,7 +153,7 @@ class TestNeutronAPIUtils(CharmTestCase):
         expect.extend(['neutron-server', 'neutron-plugin-ml2',
                       'python-networking-hyperv'])
         expect.extend(nutils.KILO_PACKAGES)
-        self.assertItemsEqual(pkg_list, expect)
+        self.assertEqual(sorted(pkg_list), sorted(expect))
 
     @patch.object(nutils, 'git_install_requested')
     def test_determine_packages_noplugin(self, git_requested):
@@ -164,12 +164,12 @@ class TestNeutronAPIUtils(CharmTestCase):
         pkg_list = nutils.determine_packages()
         expect = deepcopy(nutils.BASE_PACKAGES)
         expect.extend(['neutron-server'])
-        self.assertItemsEqual(pkg_list, expect)
+        self.assertEqual(sorted(pkg_list), sorted(expect))
 
     def test_determine_ports(self):
         self.os_release.return_value = 'havana'
         port_list = nutils.determine_ports()
-        self.assertItemsEqual(port_list, [9696])
+        self.assertEqual(port_list, [9696])
 
     @patch.object(nutils, 'manage_plugin')
     @patch('os.path.exists')
@@ -232,26 +232,14 @@ class TestNeutronAPIUtils(CharmTestCase):
         _restart_map = nutils.restart_map()
         ML2CONF = "/etc/neutron/plugins/ml2/ml2_conf.ini"
         expect = OrderedDict([
-            (nutils.NEUTRON_CONF, {
-                'services': ['neutron-server'],
-            }),
-            (nutils.NEUTRON_DEFAULT, {
-                'services': ['neutron-server'],
-            }),
-            (nutils.API_PASTE_INI, {
-                'services': ['neutron-server'],
-            }),
-            (ML2CONF, {
-                'services': ['neutron-server'],
-            }),
-            (nutils.APACHE_CONF, {
-                'services': ['apache2'],
-            }),
-            (nutils.HAPROXY_CONF, {
-                'services': ['haproxy'],
-            }),
+            (nutils.NEUTRON_CONF, ['neutron-server']),
+            (nutils.NEUTRON_DEFAULT, ['neutron-server']),
+            (nutils.API_PASTE_INI, ['neutron-server']),
+            (nutils.APACHE_CONF, ['apache2']),
+            (nutils.HAPROXY_CONF, ['haproxy']),
+            (ML2CONF, ['neutron-server']),
         ])
-        self.assertItemsEqual(_restart_map, expect)
+        self.assertEqual(_restart_map, expect)
 
     @patch('os.path.exists')
     def test_register_configs(self, mock_path_exists):
@@ -275,7 +263,7 @@ class TestNeutronAPIUtils(CharmTestCase):
                  '/etc/neutron/plugins/ml2/ml2_conf.ini',
                  '/etc/apache2/sites-available/openstack_https_frontend',
                  '/etc/haproxy/haproxy.cfg']
-        self.assertItemsEqual(_regconfs.configs, confs)
+        self.assertEqual(sorted(_regconfs.configs), sorted(confs))
 
     @patch('os.path.isfile')
     def test_keystone_ca_cert_b64_no_cert_file(self, _isfile):
@@ -390,7 +378,7 @@ class TestNeutronAPIUtils(CharmTestCase):
         self.assertFalse(migrate_neutron_db.called)
 
     @patch.object(ncontext, 'IdentityServiceContext')
-    @patch('neutronclient.v2_0.client.Client')
+    @patch.object(nutils, 'FakeNeutronClient')
     def test_get_neutron_client(self, nclient, IdentityServiceContext):
         creds = {
             'auth_protocol': 'http',
@@ -533,16 +521,16 @@ class TestNeutronAPIUtils(CharmTestCase):
         add_user_to_group.assert_called_with('neutron', 'neutron')
         expected = [
             call('/var/lib/neutron', owner='neutron',
-                 group='neutron', perms=0755, force=False),
+                 group='neutron', perms=0o755, force=False),
             call('/var/lib/neutron/lock', owner='neutron',
-                 group='neutron', perms=0755, force=False),
+                 group='neutron', perms=0o755, force=False),
             call('/var/log/neutron', owner='neutron',
-                 group='neutron', perms=0755, force=False),
+                 group='neutron', perms=0o755, force=False),
         ]
         self.assertEqual(mkdir.call_args_list, expected)
         expected = [
             call('/var/log/neutron/server.log', '', owner='neutron',
-                 group='neutron', perms=0600),
+                 group='neutron', perms=0o600),
         ]
         self.assertEqual(write_file.call_args_list, expected)
 

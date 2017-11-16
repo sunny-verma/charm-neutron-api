@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 #
 # Copyright 2016 Canonical Ltd
 #
@@ -186,8 +186,7 @@ def configure_https():
         identity_joined(rid=rid)
 
 
-@hooks.hook('install.real')
-@hooks.hook()
+@hooks.hook('install')
 @harden()
 def install():
     status_set('maintenance', 'Executing pre-install')

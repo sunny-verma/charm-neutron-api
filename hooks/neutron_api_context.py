@@ -349,7 +349,7 @@ class NeutronCCContext(context.NeutronContext):
         cmp_release = CompareOpenStackReleases(release)
         if config('neutron-plugin') in ['vsp']:
             _config = config()
-            for k, v in _config.iteritems():
+            for k, v in _config.items():
                 if k.startswith('vsd'):
                     ctxt[k.replace('-', '_')] = v
             for rid in relation_ids('vsd-rest-api'):
