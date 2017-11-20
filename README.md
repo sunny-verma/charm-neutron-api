@@ -1,4 +1,4 @@
-# Overview 
+# Overview
 
 This principle charm provides the OpenStack Neutron API service which
 was previously provided by the nova-cloud-controller charm.
@@ -59,7 +59,7 @@ of the above hostnames may be set.
 The charm will throw an exception in the following circumstances:
 If neither 'vip' nor 'dns-ha' is set and the charm is related to
 hacluster If both 'vip' and 'dns-ha' are set as they are mutually
-exclusive. If 'dns-ha' is set and none of the 
+exclusive. If 'dns-ha' is set and none of the
 os-{admin,internal,public}-hostname(s) are set
 
 # Restrictions
@@ -91,6 +91,34 @@ list of configured nameservers.
 For more information refer to the OpenStack documentation on
 [DNS Integration](https://docs.openstack.org/ocata/networking-guide/config-dns-int.html).
 
+# External DNS for Cloud Guests
+
+To add support for DNS record auto-generation when Neutron ports and
+floating IPs are created the charm needs a relation with designate charm:
+
+    juju deploy designate
+    juju add-relation neutron-api designate
+
+In order to enable the creation of reverse lookup (PTR) records, enable
+"allow-reverse-dns-lookup" charm option:
+
+    juju config neutron-api allow-reverse-dns-lookup=True
+
+and configure the following charm options:
+
+    juju config neutron-api ipv4-ptr-zone-prefix-size=<IPV4 PREFIX SIZE>
+    juju config neutron-api ipv6-ptr-zone-prefix-size=<IPV6 PREFIX SIZE>
+
+For example, if prefix sizes of your IPv4 and IPv6 subnets are
+"24" (e.g. "192.168.0.0/24") and "64" (e.g. "fdcd:06ca:e498:216b::/64")
+respectively, configure the charm options as follows:
+
+    juju config neutron-api ipv4-ptr-zone-prefix-size=24
+    juju config neutron-api ipv6-ptr-zone-prefix-size=64
+
+For more information refer to the OpenStack documentation on
+[DNS Integration](https://docs.openstack.org/ocata/networking-guide/config-dns-int.html)
+
 # Network Space support
 
 This charm supports the use of Juju Network Spaces, allowing the charm
@@ -119,7 +147,7 @@ bundle configuration:
         internal: internal-space
         shared-db: internal-space
 
-NOTE: Spaces must be configured in the underlying provider prior to 
+NOTE: Spaces must be configured in the underlying provider prior to
 attempting to use them.
 
 NOTE: Existing deployments using os-*-network configuration options
@@ -155,7 +183,7 @@ repository docs/index.txt, "Config Format" section:
 https://bitbucket.org/ianb/pastedeploy
 
 Classes in loadwsgi.py contain config_prefixes that can be used for
-middleware types - these are the prefixes the charm code validates 
+middleware types - these are the prefixes the charm code validates
 passed data against:
 
 https://bitbucket.org/ianb/pastedeploy/src/4b27133a2a7db58b213ae55b580039c11d2055c0/paste/deploy/loadwsgi.py?at=default&fileviewer=file-view-default

@@ -400,15 +400,23 @@ class NeutronCCContext(context.NeutronContext):
         if vni_ranges:
             ctxt['vni_ranges'] = ','.join(vni_ranges.split())
 
-        extension_drivers = []
-        if config('enable-ml2-port-security'):
-            extension_drivers.append(EXTENSION_DRIVER_PORT_SECURITY)
+        enable_dns_extension_driver = False
 
         dns_domain = get_dns_domain()
         if dns_domain:
-            extension_drivers.append(EXTENSION_DRIVER_DNS)
+            enable_dns_extension_driver = True
             ctxt['dns_domain'] = dns_domain
 
+        if cmp_release >= 'mitaka':
+            for rid in relation_ids('external-dns'):
+                if related_units(rid):
+                    enable_dns_extension_driver = True
+
+        extension_drivers = []
+        if config('enable-ml2-port-security'):
+            extension_drivers.append(EXTENSION_DRIVER_PORT_SECURITY)
+        if enable_dns_extension_driver:
+            extension_drivers.append(EXTENSION_DRIVER_DNS)
         if is_qos_requested_and_valid():
             extension_drivers.append(EXTENSION_DRIVER_QOS)
 
@@ -707,3 +715,25 @@ class NeutronAMQPContext(context.AMQPContext):
         context = super(NeutronAMQPContext, self).__call__()
         context['notification_topics'] = ','.join(NOTIFICATION_TOPICS)
         return context
+
+
+class DesignateContext(context.OSContextGenerator):
+    interfaces = ['external-dns']
+
+    def __call__(self):
+        ctxt = {}
+        for rid in relation_ids('external-dns'):
+            if related_units(rid):
+                for unit in related_units(rid):
+                    rdata = relation_get(rid=rid, unit=unit)
+                    ctxt['designate_endpoint'] = rdata.get('endpoint')
+        if ctxt.get('designate_endpoint') is not None:
+            ctxt['enable_designate'] = True
+            allow_reverse_dns_lookup = config('reverse-dns-lookup')
+            ctxt['allow_reverse_dns_lookup'] = allow_reverse_dns_lookup
+            if allow_reverse_dns_lookup:
+                ctxt['ipv4_ptr_zone_prefix_size'] = (
+                    config('ipv4-ptr-zone-prefix-size'))
+                ctxt['ipv6_ptr_zone_prefix_size'] = (
+                    config('ipv6-ptr-zone-prefix-size'))
+        return ctxt
