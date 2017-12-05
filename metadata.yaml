@@ -20,8 +20,8 @@ extra-bindings:
   internal:
 series:
   - xenial
+  - bionic
   - artful
-  - zesty
   - trusty
 provides:
   nrpe-external-master:
