@@ -193,7 +193,7 @@ BASE_RESOURCE_MAP = OrderedDict([
                      context.NotificationDriverContext(),
                      context.BindHostContext(),
                      context.WorkerConfigContext(),
-                     context.InternalEndpointContext(),
+                     context.InternalEndpointContext('neutron-common'),
                      context.MemcacheContext()],
     }),
     (NEUTRON_DEFAULT, {
