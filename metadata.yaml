@@ -45,9 +45,6 @@ requires:
     scope: container
   vsd-rest-api:
     interface: vsd-rest-api
-  zeromq-configuration:
-    interface: zeromq-configuration
-    scope: container
   neutron-plugin-api-subordinate:
     interface: neutron-plugin-api-subordinate
     scope: container

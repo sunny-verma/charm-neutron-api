@@ -223,7 +223,7 @@ BASE_RESOURCE_MAP = OrderedDict([
 # list has a complete context.
 REQUIRED_INTERFACES = {
     'database': ['shared-db', 'pgsql-db'],
-    'messaging': ['amqp', 'zeromq-configuration'],
+    'messaging': ['amqp'],
     'identity': ['identity-service'],
 }
 
@@ -660,16 +660,6 @@ def migrate_neutron_database(upgrade=False):
             id = "{}-{}-{}".format(local_unit(), shared_db_rel_id,
                                    uuid.uuid4())
             relation_set(relation_id=r_id, **{NEUTRON_DB_INIT_RKEY: id})
-
-
-def get_topics():
-    return ['q-l3-plugin',
-            'q-firewall-plugin',
-            'n-lbaas-plugin',
-            'ipsec_driver',
-            'q-metering-plugin',
-            'q-plugin',
-            'neutron']
 
 
 def setup_ipv6():

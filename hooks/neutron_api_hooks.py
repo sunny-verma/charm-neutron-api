@@ -56,7 +56,6 @@ from charmhelpers.contrib.openstack.utils import (
     configure_installation_source,
     git_install_requested,
     openstack_upgrade_available,
-    os_requires_version,
     os_release,
     sync_db_with_multi_ipv6_addresses,
     is_unit_paused_set,
@@ -75,7 +74,6 @@ from neutron_api_utils import (
     do_openstack_upgrade,
     dvr_router_present,
     force_etcd_restart,
-    get_topics,
     git_install,
     is_api_ready,
     l3ha_router_present,
@@ -301,8 +299,6 @@ def config_changed():
         amqp_joined(relation_id=r_id)
     for r_id in relation_ids('identity-service'):
         identity_joined(rid=r_id)
-    for rid in relation_ids('zeromq-configuration'):
-        zeromq_configuration_relation_joined(rid)
     [cluster_joined(rid) for rid in relation_ids('cluster')]
 
 
@@ -641,14 +637,6 @@ def ha_changed():
         neutron_api_relation_joined(rid=rid)
 
 
-@hooks.hook('zeromq-configuration-relation-joined')
-@os_requires_version('kilo', 'neutron-server')
-def zeromq_configuration_relation_joined(relid=None):
-    relation_set(relation_id=relid,
-                 topics=" ".join(get_topics()),
-                 users="neutron")
-
-
 @hooks.hook('neutron-plugin-api-subordinate-relation-joined',
             'neutron-plugin-api-subordinate-relation-changed')
 @restart_on_change(restart_map(), stopstart=True)
@@ -667,10 +655,9 @@ def neutron_plugin_api_subordinate_relation_joined(relid=None):
     CONFIGS.write(API_PASTE_INI)
 
 
-@hooks.hook('zeromq-configuration-relation-changed',
-            'neutron-plugin-api-subordinate-relation-changed')
+@hooks.hook('neutron-plugin-api-subordinate-relation-changed')
 @restart_on_change(restart_map(), stopstart=True)
-def zeromq_configuration_relation_changed():
+def neutron_plugin_api_relation_changed():
     CONFIGS.write_all()
 
 
