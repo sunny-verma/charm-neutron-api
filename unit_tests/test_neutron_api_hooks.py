@@ -69,7 +69,6 @@ TO_PATCH = [
     'is_clustered',
     'is_elected_leader',
     'is_qos_requested_and_valid',
-    'is_relation_made',
     'log',
     'migrate_neutron_database',
     'neutron_ready',
@@ -339,7 +338,6 @@ class NeutronAPIHooksTests(CharmTestCase):
         self.assertTrue(self.CONFIGS.write.called_with(NEUTRON_CONF))
 
     def test_db_joined(self):
-        self.is_relation_made.return_value = False
         self.get_relation_ip.return_value = '10.0.0.1'
         self._call_hook('shared-db-relation-joined')
         self.relation_set.assert_called_with(
@@ -350,7 +348,6 @@ class NeutronAPIHooksTests(CharmTestCase):
 
     def test_db_joined_spaces(self):
         self.get_relation_ip.return_value = '192.168.20.1'
-        self.is_relation_made.return_value = False
         self.unit_get.return_value = 'myhostname'
         self._call_hook('shared-db-relation-joined')
         self.relation_set.assert_called_with(
@@ -358,24 +355,6 @@ class NeutronAPIHooksTests(CharmTestCase):
             database='neutron',
             hostname='192.168.20.1',
         )
-
-    def test_db_joined_with_postgresql(self):
-        self.is_relation_made.return_value = True
-        with self.assertRaises(Exception):
-            hooks.db_joined()
-
-    def test_postgresql_db_joined(self):
-        self.unit_get.return_value = 'myhostname'
-        self.is_relation_made.return_value = False
-        self._call_hook('pgsql-db-relation-joined')
-        self.relation_set.assert_called_with(
-            database='neutron',
-        )
-
-    def test_postgresql_joined_with_db(self):
-        self.is_relation_made.return_value = True
-        with self.assertRaises(Exception):
-            hooks.pgsql_neutron_db_joined()
 
     @patch.object(hooks, 'neutron_plugin_api_subordinate_relation_joined')
     @patch.object(hooks, 'conditional_neutron_migration')
@@ -393,17 +372,6 @@ class NeutronAPIHooksTests(CharmTestCase):
         self.CONFIGS.complete_contexts.return_value = []
         self._call_hook('shared-db-relation-changed')
         self.assertFalse(self.CONFIGS.write_all.called)
-
-    @patch.object(hooks, 'neutron_plugin_api_subordinate_relation_joined')
-    @patch.object(hooks, 'conditional_neutron_migration')
-    def test_pgsql_db_changed(self, cond_neutron_mig, plugin_joined):
-        self.relation_ids.return_value = ['neutron-plugin-api-subordinate:1']
-        self._call_hook('pgsql-db-relation-changed')
-        self.assertTrue(self.CONFIGS.write.called)
-        cond_neutron_mig.assert_called_with()
-        self.relation_ids.assert_called_with('neutron-plugin-api-subordinate')
-        plugin_joined.assert_called_with(
-            relid='neutron-plugin-api-subordinate:1')
 
     def test_amqp_broken(self):
         self._call_hook('amqp-relation-broken')
@@ -496,7 +464,6 @@ class NeutronAPIHooksTests(CharmTestCase):
         self.relation_ids.side_effect = self._fake_relids
         _canonical_url.return_value = host
         self.api_port.return_value = port
-        self.is_relation_made = False
         neutron_url = '%s:%s' % (host, port)
         _relation_data = {
             'enable-sriov': False,
@@ -528,7 +495,6 @@ class NeutronAPIHooksTests(CharmTestCase):
         _canonical_url.return_value = host
         self.api_port.return_value = port
         self.get_dns_domain.return_value = ""
-        self.is_relation_made = True
         neutron_url = '%s:%s' % (host, port)
         _relation_data = {
             'enable-sriov': False,

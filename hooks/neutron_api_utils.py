@@ -182,7 +182,6 @@ BASE_RESOURCE_MAP = OrderedDict([
                          user=config('database-user'),
                          database=config('database'),
                          ssl_dir=NEUTRON_CONF_DIR),
-                     context.PostgresqlDBContext(database=config('database')),
                      neutron_api_context.IdentityServiceContext(
                          service='neutron',
                          service_user='neutron'),
@@ -222,7 +221,7 @@ BASE_RESOURCE_MAP = OrderedDict([
 # The interface is said to be satisfied if anyone of the interfaces in the
 # list has a complete context.
 REQUIRED_INTERFACES = {
-    'database': ['shared-db', 'pgsql-db'],
+    'database': ['shared-db'],
     'messaging': ['amqp'],
     'identity': ['identity-service'],
 }
@@ -485,10 +484,6 @@ def resource_map(release=None):
         resource_map[conf]['contexts'] = ctxts
         resource_map[conf]['contexts'].append(
             neutron_api_context.NeutronCCContext())
-
-        # update for postgres
-        resource_map[conf]['contexts'].append(
-            context.PostgresqlDBContext(database=config('database')))
 
         if ('kilo' <= CompareOpenStackReleases(release) <= 'mitaka' and
                 config('enable-sriov')):

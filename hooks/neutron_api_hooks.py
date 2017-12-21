@@ -24,7 +24,6 @@ from charmhelpers.core.hookenv import (
     Hooks,
     UnregisteredHookError,
     config,
-    is_relation_made,
     local_unit,
     log,
     DEBUG,
@@ -323,13 +322,6 @@ def amqp_changed():
 
 @hooks.hook('shared-db-relation-joined')
 def db_joined():
-    if is_relation_made('pgsql-db'):
-        # error, postgresql is used
-        e = ('Attempting to associate a mysql database when there is already '
-             'associated a postgresql one')
-        log(e, level=ERROR)
-        raise Exception(e)
-
     if config('prefer-ipv6'):
         sync_db_with_multi_ipv6_addresses(config('database'),
                                           config('database-user'))
@@ -348,18 +340,6 @@ def db_joined():
                      hostname=host)
 
 
-@hooks.hook('pgsql-db-relation-joined')
-def pgsql_neutron_db_joined():
-    if is_relation_made('shared-db'):
-        # raise error
-        e = ('Attempting to associate a postgresql database'
-             ' when there is already associated a mysql one')
-        log(e, level=ERROR)
-        raise Exception(e)
-
-    relation_set(database=config('database'))
-
-
 @hooks.hook('shared-db-relation-changed')
 @restart_on_change(restart_map())
 def db_changed():
@@ -373,20 +353,9 @@ def db_changed():
         neutron_plugin_api_subordinate_relation_joined(relid=r_id)
 
 
-@hooks.hook('pgsql-db-relation-changed')
-@restart_on_change(restart_map())
-def postgresql_neutron_db_changed():
-    CONFIGS.write(NEUTRON_CONF)
-    conditional_neutron_migration()
-
-    for r_id in relation_ids('neutron-plugin-api-subordinate'):
-        neutron_plugin_api_subordinate_relation_joined(relid=r_id)
-
-
 @hooks.hook('amqp-relation-broken',
             'identity-service-relation-broken',
-            'shared-db-relation-broken',
-            'pgsql-db-relation-broken')
+            'shared-db-relation-broken')
 def relation_broken():
     CONFIGS.write_all()
 
