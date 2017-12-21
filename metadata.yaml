@@ -50,6 +50,8 @@ requires:
     interface: etcd-proxy
   midonet:
     interface: midonet
+  external-dns:
+    interface: designate
 peers:
   cluster:
     interface: neutron-api-ha

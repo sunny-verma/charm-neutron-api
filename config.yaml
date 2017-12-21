@@ -692,3 +692,25 @@ options:
       Repository from which to install Calico packages. If set, must be
       a PPA URL, of the form ppa:somecustom/ppa. Changing this value
       after installation will force an immediate software upgrade.
+  reverse-dns-lookup:
+    type: boolean
+    default: False
+    description: |
+      A boolean value specifying whether to enable or not the creation of
+      reverse lookup (PTR) records.
+      .
+      NOTE: Use only when relating neutron-api charm to designate charm.
+  ipv4-ptr-zone-prefix-size:
+    type: int
+    default: 24
+    description: |
+      The size in bits of the prefix for the IPv4 reverse lookup (PTR) zones.
+      .
+      NOTE: Use only when "reverse-dns-lookup" option is set to "True".
+  ipv6-ptr-zone-prefix-size:
+    type: int
+    default: 64
+    description: |
+      The size in bits of the prefix for the IPv6 reverse lookup (PTR) zones.
+      .
+      NOTE: Use only when "reverse-dns-lookup" option is set to "True".

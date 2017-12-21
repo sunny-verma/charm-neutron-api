@@ -965,3 +965,15 @@ class NeutronAPIHooksTests(CharmTestCase):
         self.assertTrue(self.CONFIGS.register.called)
         self.CONFIGS.write.assert_any_call('/etc/init/etcd.conf')
         self.CONFIGS.write.assert_any_call('/etc/default/etcd')
+
+    def test_designate_peer_joined(self):
+        self.test_relation.set({
+            'endpoint': 'http://1.2.3.4:9001',
+        })
+        self.relation_ids.side_effect = self._fake_relids
+        self._call_hook('external-dns-relation-joined')
+        self.assertTrue(self.CONFIGS.write.called_with(NEUTRON_CONF))
+
+    def test_designate_peer_departed(self):
+        self._call_hook('external-dns-relation-departed')
+        self.assertTrue(self.CONFIGS.write.called_with(NEUTRON_CONF))

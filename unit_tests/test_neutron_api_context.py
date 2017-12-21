@@ -1114,3 +1114,50 @@ class MidonetContextTest(CharmTestCase):
                   'midonet_api_port': '8080'}
 
         self.assertEqual(expect, ctxt)
+
+
+class DesignateContextTest(CharmTestCase):
+
+    def setUp(self):
+        super(DesignateContextTest, self).setUp(context, TO_PATCH)
+        self.relation_get.side_effect = self.test_relation.get
+
+    def tearDown(self):
+        super(DesignateContextTest, self).tearDown()
+
+    def test_designate_no_related_units(self):
+        self.related_units.return_value = []
+        ctxt = context.DesignateContext()()
+        expect = {}
+
+        self.assertEquals(expect, ctxt)
+
+    def test_designate_related_units_no_reverse_dns_lookup(self):
+        self.config.side_effect = self.test_config.get
+        self.related_units.return_value = ['unit1']
+        self.relation_ids.return_value = ['rid1']
+        self.test_relation.set({'endpoint': 'http://1.1.1.1:9001'})
+        self.test_config.set('reverse-dns-lookup', False)
+        ctxt = context.DesignateContext()()
+        expect = {'enable_designate': True,
+                  'designate_endpoint': 'http://1.1.1.1:9001',
+                  'allow_reverse_dns_lookup': False}
+
+        self.assertEquals(expect, ctxt)
+
+    def test_designate_related_units_and_reverse_dns_lookup(self):
+        self.config.side_effect = self.test_config.get
+        self.related_units.return_value = ['unit1']
+        self.relation_ids.return_value = ['rid1']
+        self.test_relation.set({'endpoint': 'http://1.1.1.1:9001'})
+        self.test_config.set('reverse-dns-lookup', True)
+        self.test_config.set('ipv4-ptr-zone-prefix-size', 24)
+        self.test_config.set('ipv6-ptr-zone-prefix-size', 64)
+        ctxt = context.DesignateContext()()
+        expect = {'enable_designate': True,
+                  'designate_endpoint': 'http://1.1.1.1:9001',
+                  'allow_reverse_dns_lookup': True,
+                  'ipv4_ptr_zone_prefix_size': 24,
+                  'ipv6_ptr_zone_prefix_size': 64}
+
+        self.assertEquals(expect, ctxt)

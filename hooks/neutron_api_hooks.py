@@ -669,6 +669,15 @@ def midonet_changed():
     CONFIGS.write_all()
 
 
+@hooks.hook('external-dns-relation-joined',
+            'external-dns-relation-changed',
+            'external-dns-relation-departed',
+            'external-dns-relation-broken')
+@restart_on_change(restart_map())
+def designate_changed():
+    CONFIGS.write_all()
+
+
 @hooks.hook('update-status')
 @harden()
 @harden()
