@@ -15,6 +15,7 @@
 import sys
 
 import yaml
+import json
 
 from mock import MagicMock, patch, call
 from test_utils import CharmTestCase
@@ -233,12 +234,14 @@ class NeutronAPIHooksTests(CharmTestCase):
         _amqp_rel_joined = self.patch('amqp_joined')
         _id_rel_joined = self.patch('identity_joined')
         _id_cluster_joined = self.patch('cluster_joined')
+        _id_ha_joined = self.patch('ha_joined')
         self._call_hook('config-changed')
         self.assertTrue(_n_api_rel_joined.called)
         self.assertTrue(_n_plugin_api_rel_joined.called)
         self.assertTrue(_amqp_rel_joined.called)
         self.assertTrue(_id_rel_joined.called)
         self.assertTrue(_id_cluster_joined.called)
+        self.assertTrue(_id_ha_joined.called)
         self.assertTrue(self.CONFIGS.write_all.called)
         self.assertTrue(self.do_openstack_upgrade.called)
         self.assertTrue(self.apt_install.called)
@@ -275,6 +278,7 @@ class NeutronAPIHooksTests(CharmTestCase):
         _amqp_rel_joined = self.patch('amqp_joined')
         _id_rel_joined = self.patch('identity_joined')
         _id_cluster_joined = self.patch('cluster_joined')
+        _id_ha_joined = self.patch('ha_joined')
         repo = 'cloud:trusty-juno'
         openstack_origin_git = {
             'repositories': [
@@ -304,6 +308,7 @@ class NeutronAPIHooksTests(CharmTestCase):
         self.assertTrue(_amqp_rel_joined.called)
         self.assertTrue(_id_rel_joined.called)
         self.assertTrue(_id_cluster_joined.called)
+        self.assertTrue(_id_ha_joined.called)
 
     @patch.object(hooks, 'git_install_requested')
     def test_config_changed_with_openstack_upgrade_action(self, git_requested):
@@ -769,23 +774,30 @@ class NeutronAPIHooksTests(CharmTestCase):
         self.get_netmask_for_address.return_value = '255.255.255.0'
         _relation_data = {
             'relation_id': None,
-            'init_services': {'res_neutron_haproxy': 'haproxy'},
             'corosync_bindiface': _ha_config['ha-bindiface'],
             'corosync_mcastport': _ha_config['ha-mcastport'],
-            'resources': {
+            'json_init_services': json.dumps({
+                'res_neutron_haproxy': 'haproxy'
+            }, sort_keys=True),
+            'json_resources': json.dumps({
                 'res_neutron_eth0_vip': 'ocf:heartbeat:IPaddr2',
                 'res_neutron_haproxy': 'lsb:haproxy'
-            },
-            'resource_params': {
+            }, sort_keys=True),
+            'json_resource_params': json.dumps({
                 'res_neutron_eth0_vip': vip_params,
                 'res_neutron_haproxy': 'op monitor interval="5s"'
-            },
-            'clones': {'cl_nova_haproxy': 'res_neutron_haproxy'}
+            }, sort_keys=True),
+            'json_clones': json.dumps({
+                'cl_nova_haproxy': 'res_neutron_haproxy'
+            }, sort_keys=True),
         }
         self._call_hook('ha-relation-joined')
-        self.relation_set.assert_called_with(
-            **_relation_data
-        )
+        self.relation_set.assert_has_calls([
+            call(**_relation_data),
+            call(clones=None, groups=None,
+                 init_services=None, relation_id=None,
+                 resource_params=None, resources=None),
+        ])
 
     @patch.object(hooks, 'get_hacluster_config')
     def test_ha_joined_no_bound_ip(self, _get_ha_config):
@@ -802,23 +814,30 @@ class NeutronAPIHooksTests(CharmTestCase):
         self.get_netmask_for_address.return_value = None
         _relation_data = {
             'relation_id': None,
-            'init_services': {'res_neutron_haproxy': 'haproxy'},
+            'json_init_services': json.dumps({
+                'res_neutron_haproxy': 'haproxy'
+            }, sort_keys=True),
             'corosync_bindiface': _ha_config['ha-bindiface'],
             'corosync_mcastport': _ha_config['ha-mcastport'],
-            'resources': {
+            'json_resources': json.dumps({
                 'res_neutron_eth120_vip': 'ocf:heartbeat:IPaddr2',
                 'res_neutron_haproxy': 'lsb:haproxy'
-            },
-            'resource_params': {
+            }, sort_keys=True),
+            'json_resource_params': json.dumps({
                 'res_neutron_eth120_vip': vip_params,
                 'res_neutron_haproxy': 'op monitor interval="5s"'
-            },
-            'clones': {'cl_nova_haproxy': 'res_neutron_haproxy'}
+            }, sort_keys=True),
+            'json_clones': json.dumps({
+                'cl_nova_haproxy': 'res_neutron_haproxy'
+            }, sort_keys=True),
         }
         self._call_hook('ha-relation-joined')
-        self.relation_set.assert_called_with(
-            **_relation_data
-        )
+        self.relation_set.assert_has_calls([
+            call(**_relation_data),
+            call(clones=None, groups=None,
+                 init_services=None, relation_id=None,
+                 resource_params=None, resources=None),
+        ])
 
     @patch.object(hooks, 'get_hacluster_config')
     def test_ha_joined_with_ipv6(self, _get_ha_config):
@@ -839,23 +858,30 @@ class NeutronAPIHooksTests(CharmTestCase):
         self.get_netmask_for_address.return_value = 'ffff.ffff.ffff.ffff'
         _relation_data = {
             'relation_id': None,
-            'init_services': {'res_neutron_haproxy': 'haproxy'},
+            'json_init_services': json.dumps({
+                'res_neutron_haproxy': 'haproxy'
+            }, sort_keys=True),
             'corosync_bindiface': _ha_config['ha-bindiface'],
             'corosync_mcastport': _ha_config['ha-mcastport'],
-            'resources': {
+            'json_resources': json.dumps({
                 'res_neutron_eth0_vip': 'ocf:heartbeat:IPv6addr',
                 'res_neutron_haproxy': 'lsb:haproxy'
-            },
-            'resource_params': {
+            }, sort_keys=True),
+            'json_resource_params': json.dumps({
                 'res_neutron_eth0_vip': vip_params,
                 'res_neutron_haproxy': 'op monitor interval="5s"'
-            },
-            'clones': {'cl_nova_haproxy': 'res_neutron_haproxy'}
+            }, sort_keys=True),
+            'json_clones': json.dumps({
+                'cl_nova_haproxy': 'res_neutron_haproxy'
+            }, sort_keys=True),
         }
         self._call_hook('ha-relation-joined')
-        self.relation_set.assert_called_with(
-            **_relation_data
-        )
+        self.relation_set.assert_has_calls([
+            call(**_relation_data),
+            call(clones=None, groups=None,
+                 init_services=None, relation_id=None,
+                 resource_params=None, resources=None),
+        ])
 
     @patch.object(hooks, 'get_hacluster_config')
     def test_ha_joined_dns_ha(self, _get_hacluster_config):
@@ -875,24 +901,36 @@ class NeutronAPIHooksTests(CharmTestCase):
             'os-internal-hostname': None,
             'os-public-hostname': 'neutron-api.maas',
         }
-        args = {
+        _relation_data = {
             'relation_id': None,
             'corosync_bindiface': 'em0',
             'corosync_mcastport': '8080',
-            'init_services': {'res_neutron_haproxy': 'haproxy'},
-            'resources': {'res_neutron_public_hostname': 'ocf:maas:dns',
-                          'res_neutron_haproxy': 'lsb:haproxy'},
-            'resource_params': {
+            'json_init_services': json.dumps({
+                'res_neutron_haproxy': 'haproxy'
+            }, sort_keys=True),
+            'json_resources': json.dumps({
+                'res_neutron_public_hostname': 'ocf:maas:dns',
+                'res_neutron_haproxy': 'lsb:haproxy'
+            }, sort_keys=True),
+            'json_resource_params': json.dumps({
                 'res_neutron_public_hostname':
                     'params fqdn="neutron-api.maas" ip_address="10.0.0.1"',
-                'res_neutron_haproxy': 'op monitor interval="5s"'},
-            'clones': {'cl_nova_haproxy': 'res_neutron_haproxy'}
+                'res_neutron_haproxy': 'op monitor interval="5s"'
+            }, sort_keys=True),
+            'json_clones': json.dumps({
+                'cl_nova_haproxy': 'res_neutron_haproxy'
+            }, sort_keys=True),
         }
         self.update_dns_ha_resource_params.side_effect = _fake_update
 
         hooks.ha_joined()
         self.assertTrue(self.update_dns_ha_resource_params.called)
-        self.relation_set.assert_called_with(**args)
+        self.relation_set.assert_has_calls([
+            call(**_relation_data),
+            call(clones=None, groups=None,
+                 init_services=None, relation_id=None,
+                 resource_params=None, resources=None),
+        ])
 
     def test_ha_changed(self):
         self.test_relation.set({

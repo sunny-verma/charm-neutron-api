@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import json
 import sys
 import uuid
 from subprocess import (
@@ -298,6 +299,8 @@ def config_changed():
         amqp_joined(relation_id=r_id)
     for r_id in relation_ids('identity-service'):
         identity_joined(rid=r_id)
+    for r_id in relation_ids('ha'):
+        ha_joined(relation_id=r_id)
     [cluster_joined(rid) for rid in relation_ids('cluster')]
 
 
@@ -574,7 +577,12 @@ def ha_joined(relation_id=None):
                 vip_group.append(vip_key)
 
         if len(vip_group) >= 1:
-            relation_set(groups={'grp_neutron_vips': ' '.join(vip_group)})
+            relation_set(
+                relation_id=relation_id,
+                json_groups=json.dumps({
+                    'grp_neutron_vips': ' '.join(vip_group)
+                }, sort_keys=True)
+            )
 
     init_services = {
         'res_neutron_haproxy': 'haproxy'
@@ -583,12 +591,22 @@ def ha_joined(relation_id=None):
         'cl_nova_haproxy': 'res_neutron_haproxy'
     }
     relation_set(relation_id=relation_id,
-                 init_services=init_services,
                  corosync_bindiface=cluster_config['ha-bindiface'],
                  corosync_mcastport=cluster_config['ha-mcastport'],
-                 resources=resources,
-                 resource_params=resource_params,
-                 clones=clones)
+                 json_init_services=json.dumps(init_services,
+                                               sort_keys=True),
+                 json_resources=json.dumps(resources,
+                                           sort_keys=True),
+                 json_resource_params=json.dumps(resource_params,
+                                                 sort_keys=True),
+                 json_clones=json.dumps(clones,
+                                        sort_keys=True))
+
+    # NOTE(jamespage): Clear any non-json based keys
+    relation_set(relation_id=relation_id,
+                 groups=None, init_services=None,
+                 resources=None, resource_params=None,
+                 clones=None)
 
 
 @hooks.hook('ha-relation-changed')
