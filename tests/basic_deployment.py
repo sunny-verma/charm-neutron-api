@@ -13,8 +13,6 @@
 # limitations under the License.
 
 import amulet
-import os
-import yaml
 
 from charmhelpers.contrib.openstack.amulet.deployment import (
     OpenStackAmuletDeployment
@@ -33,12 +31,11 @@ u = OpenStackAmuletUtils(DEBUG)
 class NeutronAPIBasicDeployment(OpenStackAmuletDeployment):
     """Amulet tests on a basic neutron-api deployment."""
 
-    def __init__(self, series, openstack=None, source=None, git=False,
+    def __init__(self, series, openstack=None, source=None,
                  stable=False):
         """Deploy the entire test environment."""
         super(NeutronAPIBasicDeployment, self).__init__(series, openstack,
                                                         source, stable)
-        self.git = git
         self._add_services()
         self._add_relations()
         self._configure_services()
@@ -120,57 +117,6 @@ class NeutronAPIBasicDeployment(OpenStackAmuletDeployment):
     def _configure_services(self):
         """Configure all of the services."""
         neutron_api_config = {}
-        if self.git:
-            amulet_http_proxy = os.environ.get('AMULET_HTTP_PROXY')
-
-            branch = 'stable/' + self._get_openstack_release_string()
-
-            if self._get_openstack_release() >= self.trusty_kilo:
-                openstack_origin_git = {
-                    'repositories': [
-                        {'name': 'requirements',
-                         'repository': 'git://github.com/openstack/requirements',  # noqa
-                         'branch': branch},
-                        {'name': 'neutron-fwaas',
-                         'repository': 'git://github.com/openstack/neutron-fwaas',  # noqa
-                         'branch': branch},
-                        {'name': 'neutron-lbaas',
-                         'repository': 'git://github.com/openstack/neutron-lbaas',  # noqa
-                         'branch': branch},
-                        {'name': 'neutron-vpnaas',
-                         'repository': 'git://github.com/openstack/neutron-vpnaas',  # noqa
-                         'branch': branch},
-                        {'name': 'neutron',
-                         'repository': 'git://github.com/openstack/neutron',
-                         'branch': branch},
-                    ],
-                    'directory': '/mnt/openstack-git',
-                    'http_proxy': amulet_http_proxy,
-                    'https_proxy': amulet_http_proxy,
-                }
-            else:
-                reqs_repo = 'git://github.com/openstack/requirements'
-                neutron_repo = 'git://github.com/openstack/neutron'
-                if self._get_openstack_release() == self.trusty_icehouse:
-                    reqs_repo = 'git://github.com/coreycb/requirements'
-                    neutron_repo = 'git://github.com/coreycb/neutron'
-
-                openstack_origin_git = {
-                    'repositories': [
-                        {'name': 'requirements',
-                         'repository': reqs_repo,
-                         'branch': branch},
-                        {'name': 'neutron',
-                         'repository': neutron_repo,
-                         'branch': branch},
-                    ],
-                    'directory': '/mnt/openstack-git',
-                    'http_proxy': amulet_http_proxy,
-                    'https_proxy': amulet_http_proxy,
-                }
-            neutron_api_config['openstack-origin-git'] = \
-                yaml.dump(openstack_origin_git)
-
         neutron_api_config['enable-sriov'] = True
         neutron_api_config['supported-pci-vendor-devs'] = '8086:1515'
 

@@ -52,9 +52,7 @@ from charmhelpers.fetch import (
 )
 
 from charmhelpers.contrib.openstack.utils import (
-    config_value_changed,
     configure_installation_source,
-    git_install_requested,
     openstack_upgrade_available,
     os_release,
     sync_db_with_multi_ipv6_addresses,
@@ -74,7 +72,6 @@ from neutron_api_utils import (
     do_openstack_upgrade,
     dvr_router_present,
     force_etcd_restart,
-    git_install,
     is_api_ready,
     l3ha_router_present,
     migrate_neutron_database,
@@ -200,9 +197,6 @@ def install():
     packages = determine_packages(openstack_origin)
     apt_install(packages, fatal=True)
 
-    status_set('maintenance', 'Git install')
-    git_install(config('openstack-origin-git'))
-
     [open_port(port) for port in determine_ports()]
 
     if neutron_plugin == 'midonet':
@@ -271,11 +265,7 @@ def config_changed():
                                           config('database-user'))
 
     global CONFIGS
-    if git_install_requested():
-        if config_value_changed('openstack-origin-git'):
-            status_set('maintenance', 'Running Git install')
-            git_install(config('openstack-origin-git'))
-    elif not config('action-managed-upgrade'):
+    if not config('action-managed-upgrade'):
         if openstack_upgrade_available('neutron-common'):
             status_set('maintenance', 'Running openstack upgrade')
             do_openstack_upgrade(CONFIGS)

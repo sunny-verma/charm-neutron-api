@@ -30,13 +30,6 @@ from charmhelpers.contrib.openstack.neutron import (
 from charmhelpers.contrib.openstack.utils import (
     os_release,
     get_os_codename_install_source,
-    git_clone_and_install,
-    git_default_repos,
-    git_generate_systemd_init_files,
-    git_install_requested,
-    git_pip_venv_dir,
-    git_src_dir,
-    git_yaml_value,
     configure_installation_source,
     incomplete_relation_data,
     is_unit_paused_set,
@@ -48,10 +41,6 @@ from charmhelpers.contrib.openstack.utils import (
     enable_memcache,
     CompareOpenStackReleases,
     reset_os_release,
-)
-
-from charmhelpers.contrib.python.packages import (
-    pip_install,
 )
 
 from charmhelpers.core.hookenv import (
@@ -75,23 +64,16 @@ from charmhelpers.fetch import (
 
 from charmhelpers.core.host import (
     lsb_release,
-    adduser,
-    add_group,
-    add_user_to_group,
     CompareHostReleases,
-    mkdir,
     service_stop,
     service_start,
     service_restart,
-    write_file,
 )
 
 from charmhelpers.contrib.hahelpers.cluster import (
     get_hacluster_config,
 )
 
-
-from charmhelpers.core.templating import render
 from charmhelpers.contrib.hahelpers.cluster import is_elected_leader
 
 import neutron_api_context
@@ -132,20 +114,6 @@ BASE_GIT_PACKAGES = [
     'python-pip',
     'python-setuptools',
     'zlib1g-dev',
-]
-
-# ubuntu packages that should not be installed when deploying from git
-GIT_PACKAGE_BLACKLIST = [
-    'neutron-server',
-    'neutron-plugin-ml2',
-    'python-keystoneclient',
-    'python-six',
-]
-
-GIT_PACKAGE_BLACKLIST_KILO = [
-    'python-neutron-lbaas',
-    'python-neutron-fwaas',
-    'python-neutron-vpnaas',
 ]
 
 BASE_SERVICES = [
@@ -427,17 +395,6 @@ def determine_packages(source=None):
     if config('neutron-plugin') == 'vsp':
         nuage_pkgs = config('nuage-packages').split()
         packages += nuage_pkgs
-
-    if git_install_requested():
-        packages.extend(BASE_GIT_PACKAGES)
-        # don't include packages that will be installed from git
-        packages = list(set(packages))
-        for p in GIT_PACKAGE_BLACKLIST:
-            if p in packages:
-                packages.remove(p)
-        if CompareOpenStackReleases(release) >= 'kilo':
-            for p in GIT_PACKAGE_BLACKLIST_KILO:
-                packages.remove(p)
 
     packages.extend(token_cache_pkgs(release=release))
     return list(set(packages))
@@ -740,110 +697,6 @@ def neutron_ready():
     except:
         log('neutron query failed, neutron not ready ')
         return False
-
-
-def git_install(projects_yaml):
-    """Perform setup, and install git repos specified in yaml parameter."""
-    if git_install_requested():
-        git_pre_install()
-        projects_yaml = git_default_repos(projects_yaml)
-        git_clone_and_install(projects_yaml, core_project='neutron')
-        git_post_install(projects_yaml)
-
-
-def git_pre_install():
-    """Perform pre-install setup."""
-    dirs = [
-        '/var/lib/neutron',
-        '/var/lib/neutron/lock',
-        '/var/log/neutron',
-    ]
-
-    logs = [
-        '/var/log/neutron/server.log',
-    ]
-
-    adduser('neutron', shell='/bin/bash', system_user=True)
-    add_group('neutron', system_group=True)
-    add_user_to_group('neutron', 'neutron')
-
-    for d in dirs:
-        mkdir(d, owner='neutron', group='neutron', perms=0o755, force=False)
-
-    for l in logs:
-        write_file(l, '', owner='neutron', group='neutron', perms=0o600)
-
-
-def git_post_install(projects_yaml):
-    """Perform post-install setup."""
-    http_proxy = git_yaml_value(projects_yaml, 'http_proxy')
-    if http_proxy:
-        pip_install('mysql-python', proxy=http_proxy,
-                    venv=git_pip_venv_dir(projects_yaml))
-    else:
-        pip_install('mysql-python',
-                    venv=git_pip_venv_dir(projects_yaml))
-
-    src_etc = os.path.join(git_src_dir(projects_yaml, 'neutron'), 'etc')
-    configs = [
-        {'src': src_etc,
-         'dest': '/etc/neutron'},
-        {'src': os.path.join(src_etc, 'neutron/plugins'),
-         'dest': '/etc/neutron/plugins'},
-        {'src': os.path.join(src_etc, 'neutron/rootwrap.d'),
-         'dest': '/etc/neutron/rootwrap.d'},
-    ]
-
-    for c in configs:
-        if os.path.exists(c['dest']):
-            shutil.rmtree(c['dest'])
-        shutil.copytree(c['src'], c['dest'])
-
-    # NOTE(coreycb): Need to find better solution than bin symlinks.
-    symlinks = [
-        {'src': os.path.join(git_pip_venv_dir(projects_yaml),
-                             'bin/neutron-rootwrap'),
-         'link': '/usr/local/bin/neutron-rootwrap'},
-        {'src': os.path.join(git_pip_venv_dir(projects_yaml),
-                             'bin/neutron-db-manage'),
-         'link': '/usr/local/bin/neutron-db-manage'},
-    ]
-
-    for s in symlinks:
-        if os.path.lexists(s['link']):
-            os.remove(s['link'])
-        os.symlink(s['src'], s['link'])
-
-    render('git/neutron_sudoers', '/etc/sudoers.d/neutron_sudoers', {},
-           perms=0o440)
-
-    bin_dir = os.path.join(git_pip_venv_dir(projects_yaml), 'bin')
-    # Use systemd init units/scripts from ubuntu wily onward
-    if lsb_release()['DISTRIB_RELEASE'] >= '15.10':
-        templates_dir = os.path.join(charm_dir(), 'templates/git')
-        daemon = 'neutron-server'
-        neutron_api_context = {
-            'daemon_path': os.path.join(bin_dir, daemon),
-        }
-        template_file = 'git/{}.init.in.template'.format(daemon)
-        init_in_file = '{}.init.in'.format(daemon)
-        render(template_file, os.path.join(templates_dir, init_in_file),
-               neutron_api_context, perms=0o644)
-        git_generate_systemd_init_files(templates_dir)
-    else:
-        neutron_api_context = {
-            'service_description': 'Neutron API server',
-            'charm_name': 'neutron-api',
-            'process_name': 'neutron-server',
-            'executable_name': os.path.join(bin_dir, 'neutron-server'),
-        }
-
-        render('git/upstart/neutron-server.upstart',
-               '/etc/init/neutron-server.conf',
-               neutron_api_context, perms=0o644)
-
-    if not is_unit_paused_set():
-        service_restart('neutron-server')
 
 
 def get_optional_interfaces():

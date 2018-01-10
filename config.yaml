@@ -31,42 +31,6 @@ options:
       NOTE: updating this setting to a source that is known to provide
       a later version of OpenStack will trigger a software upgrade unless
       action-managed-upgrade is set to True.
-  openstack-origin-git:
-    type: string
-    default:
-    description: |
-      Specifies a default OpenStack release name, or a YAML dictionary
-      listing the git repositories to install from.
-      .
-      The default Openstack release name may be one of the following, where
-      the corresponding OpenStack github branch will be used:
-        * liberty
-        * mitaka
-        * newton
-        * master
-      .
-      The YAML must minimally include the following repositories, and may
-      also include repositories for other dependencies:
-        repositories:
-        - {name: requirements,
-           repository: 'git://github.com/openstack/requirements',
-           branch: master}
-        - {name: networking-hyperv,
-           repository: 'git://github.com/openstack/networking-hyperv',
-           branch: master}
-        - {name: neutron-fwaas,
-           repository: 'git://github.com/openstack/neutron-fwaas',
-           branch: master}
-        - {name: neutron-lbaas,
-           repository: 'git://github.com/openstack/neutron-lbaas',
-           branch: master}
-        - {name: neutron-vpnaas,
-           repository: 'git://github.com/openstack/neutron-vpnaas',
-           branch: master}
-        - {name: neutron,
-           repository: 'git://github.com/openstack/neutron',
-           branch: master}
-        release: master
   extra-key:
     type: string
     default:
@@ -296,7 +260,7 @@ options:
       NOTE: This options is available starting from Mitaka release.
   path-mtu:
     type: int
-    default: 
+    default:
     description: |
       Maximum size of an IP packet (MTU) that can traverse the
       underlying physical network infrastructure without fragmentation
