@@ -470,10 +470,10 @@ class NeutronCCContext(context.NeutronContext):
                             'LoadBalancerPluginv2')],
                 'ocata': ['router', 'firewall', 'vpnaas', 'metering',
                           ('neutron_lbaas.services.loadbalancer.plugin.'
-                           'LoadBalancerPluginv2')],
+                           'LoadBalancerPluginv2'), 'segments'],
                 'pike': ['router', 'firewall', 'metering',
                          ('neutron_lbaas.services.loadbalancer.plugin.'
-                          'LoadBalancerPluginv2')],
+                          'LoadBalancerPluginv2'), 'segments'],
             }
             ctxt['service_plugins'] = service_plugins.get(
                 release, service_plugins['pike'])
