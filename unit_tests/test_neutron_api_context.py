@@ -1132,7 +1132,7 @@ class DesignateContextTest(CharmTestCase):
         ctxt = context.DesignateContext()()
         expect = {}
 
-        self.assertEquals(expect, ctxt)
+        self.assertEqual(expect, ctxt)
 
     def test_designate_related_units_no_reverse_dns_lookup(self):
         self.config.side_effect = self.test_config.get
@@ -1145,7 +1145,7 @@ class DesignateContextTest(CharmTestCase):
                   'designate_endpoint': 'http://1.1.1.1:9001',
                   'allow_reverse_dns_lookup': False}
 
-        self.assertEquals(expect, ctxt)
+        self.assertEqual(expect, ctxt)
 
     def test_designate_related_units_and_reverse_dns_lookup(self):
         self.config.side_effect = self.test_config.get
@@ -1162,4 +1162,4 @@ class DesignateContextTest(CharmTestCase):
                   'ipv4_ptr_zone_prefix_size': 24,
                   'ipv6_ptr_zone_prefix_size': 64}
 
-        self.assertEquals(expect, ctxt)
+        self.assertEqual(expect, ctxt)
