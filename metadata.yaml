@@ -21,7 +21,6 @@ extra-bindings:
 series:
   - xenial
   - artful
-  - zesty
   - trusty
 provides:
   nrpe-external-master:

@@ -312,6 +312,7 @@ class HAProxyContextTest(CharmTestCase):
         with patch('builtins.__import__'):
             self.assertTrue('units' not in hap_ctxt())
 
+    @patch.object(charmhelpers.contrib.openstack.context, 'get_relation_ip')
     @patch.object(charmhelpers.contrib.openstack.context, 'mkdir')
     @patch.object(
         charmhelpers.contrib.openstack.context, 'get_netmask_for_address')
@@ -330,7 +331,7 @@ class HAProxyContextTest(CharmTestCase):
     def test_context_peers(self, _open, _import, _kv, _log, _rids, _runits,
                            _rget, _uget, _lunit, _config,
                            _get_address_in_network, _get_netmask_for_address,
-                           _mkdir):
+                           _mkdir, _get_relation_ip):
         unit_addresses = {
             'neutron-api-0': '10.10.10.10',
             'neutron-api-1': '10.10.10.11',
@@ -340,6 +341,7 @@ class HAProxyContextTest(CharmTestCase):
         _rget.return_value = unit_addresses['neutron-api-0']
         _lunit.return_value = "neutron-api/1"
         _uget.return_value = unit_addresses['neutron-api-1']
+        _get_relation_ip.return_value = unit_addresses['neutron-api-1']
         _config.return_value = None
         _get_address_in_network.return_value = None
         _get_netmask_for_address.return_value = '255.255.255.0'
