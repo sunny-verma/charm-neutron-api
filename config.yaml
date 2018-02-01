@@ -267,6 +267,15 @@ options:
       when using an overlay/tunnel protocol. This option allows
       specifying a physical network MTU value that differs from the
       default global-physnet-mtu value.
+  physical-network-mtus:
+     type: string
+     default:
+     description: |
+      Space-delimited list of <physical_network>:<mtu> pairs specifying MTU for
+      individual physical networks.
+      .
+      Use this if a subset of your flat or VLAN provider networks have a MTU
+      that differ with what is set in global-physnet-mtu.
   dns-domain:
     type: string
     default: openstack.example.

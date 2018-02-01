@@ -452,6 +452,48 @@ class NeutronCCContextTest(CharmTestCase):
 
     @patch.object(context.NeutronCCContext, 'network_manager')
     @patch.object(context.NeutronCCContext, 'plugin')
+    @patch('builtins.__import__')
+    def test_neutroncc_context_no_setting_mitaka(self, _import, plugin, nm):
+        plugin.return_value = None
+        ctxt_data = {
+            'debug': True,
+            'enable_dvr': False,
+            'l3_ha': False,
+            'mechanism_drivers': 'openvswitch,hyperv,l2population',
+            'dhcp_agents_per_network': 3,
+            'enable_sriov': False,
+            'external_network': 'bob',
+            'global_physnet_mtu': 1500,
+            'neutron_bind_port': self.api_port,
+            'verbose': True,
+            'l2_population': True,
+            'overlay_network_type': 'gre',
+            'path_mtu': 1500,
+            'tenant_network_types': 'gre,vlan,flat,local',
+            'quota_floatingip': 50,
+            'quota_health_monitors': -1,
+            'quota_member': -1,
+            'quota_network': 10,
+            'quota_pool': 10,
+            'quota_port': 50,
+            'quota_router': 10,
+            'quota_security_group': 10,
+            'quota_security_group_rule': 100,
+            'quota_subnet': 10,
+            'quota_vip': 10,
+            'vlan_ranges': 'physnet1:1000:2000',
+            'vni_ranges': '1001:2000',
+            'extension_drivers': 'port_security',
+            'service_plugins': 'router,firewall,lbaas,vpnaas,metering',
+        }
+        napi_ctxt = context.NeutronCCContext()
+        self.maxDiff = None
+        self.os_release.return_value = 'mitaka'
+        with patch.object(napi_ctxt, '_ensure_packages'):
+            self.assertEqual(ctxt_data, napi_ctxt())
+
+    @patch.object(context.NeutronCCContext, 'network_manager')
+    @patch.object(context.NeutronCCContext, 'plugin')
     def test_neutroncc_context_dns_setting(self, plugin, nm):
         plugin.return_value = None
         self.test_config.set('enable-ml2-dns', True)
@@ -809,6 +851,30 @@ class NeutronCCContextTest(CharmTestCase):
             'neutron_lbaas.services.loadbalancer.plugin.LoadBalancerPluginv2')
         self.assertEqual(context.NeutronCCContext()()['service_plugins'],
                          service_plugins)
+
+    @patch.object(context.NeutronCCContext, 'network_manager')
+    @patch.object(context.NeutronCCContext, 'plugin')
+    def test_neutroncc_context_physical_network_mtus(self, plugin, nm):
+        plugin.return_value = None
+        self.test_config.set('physical-network-mtus', 'provider1:4000')
+        self.os_release.return_value = 'mitaka'
+        napi_ctxt = context.NeutronCCContext()
+        with patch.object(napi_ctxt, '_ensure_packages'):
+            ctxt = napi_ctxt()
+            self.assertEqual(ctxt['physical_network_mtus'], 'provider1:4000')
+
+    @patch.object(context.NeutronCCContext, 'network_manager')
+    @patch.object(context.NeutronCCContext, 'plugin')
+    def test_neutroncc_context_physical_network_mtus_multi(self, plugin, nm):
+        plugin.return_value = None
+        self.test_config.set('physical-network-mtus',
+                             'provider1:4000 provider2:5000')
+        self.os_release.return_value = 'mitaka'
+        napi_ctxt = context.NeutronCCContext()
+        with patch.object(napi_ctxt, '_ensure_packages'):
+            ctxt = napi_ctxt()
+            self.assertEqual(ctxt['physical_network_mtus'],
+                             'provider1:4000,provider2:5000')
 
 
 class EtcdContextTest(CharmTestCase):

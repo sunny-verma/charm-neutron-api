@@ -432,6 +432,10 @@ class NeutronCCContext(context.NeutronContext):
                     ctxt['path_mtu'] = config('path-mtu')
                 else:
                     ctxt['path_mtu'] = config('global-physnet-mtu')
+                physical_network_mtus = config('physical-network-mtus')
+                if physical_network_mtus:
+                    ctxt['physical_network_mtus'] = ','.join(
+                        physical_network_mtus.split())
 
         if 'kilo' <= cmp_release <= 'mitaka':
             pci_vendor_devs = config('supported-pci-vendor-devs')
