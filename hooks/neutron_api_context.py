@@ -53,6 +53,7 @@ ETC_NEUTRON = '/etc/neutron'
 
 NOTIFICATION_TOPICS = [
     'notifications',
+    'notifications_designate'
 ]
 
 # Domain name validation regex which is used to certify that
