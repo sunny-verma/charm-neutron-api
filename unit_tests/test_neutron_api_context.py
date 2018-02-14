@@ -841,14 +841,17 @@ class NeutronCCContextTest(CharmTestCase):
         self.os_release.return_value = 'ocata'
         service_plugins = (
             'router,firewall,vpnaas,metering,'
-            'neutron_lbaas.services.loadbalancer.plugin.LoadBalancerPluginv2')
+            'neutron_lbaas.services.loadbalancer.plugin.LoadBalancerPluginv2,'
+            'segments'
+        )
         self.assertEqual(context.NeutronCCContext()()['service_plugins'],
                          service_plugins)
         # pike
         self.os_release.return_value = 'pike'
         service_plugins = (
             'router,firewall,metering,'
-            'neutron_lbaas.services.loadbalancer.plugin.LoadBalancerPluginv2')
+            'neutron_lbaas.services.loadbalancer.plugin.LoadBalancerPluginv2,'
+            'segments')
         self.assertEqual(context.NeutronCCContext()()['service_plugins'],
                          service_plugins)
 
