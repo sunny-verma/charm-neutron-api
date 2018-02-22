@@ -849,9 +849,9 @@ class NeutronCCContextTest(CharmTestCase):
         # pike
         self.os_release.return_value = 'pike'
         service_plugins = (
-            'router,firewall,metering,'
+            'router,firewall,metering,segments,'
             'neutron_lbaas.services.loadbalancer.plugin.LoadBalancerPluginv2,'
-            'segments')
+            'neutron_dynamic_routing.services.bgp.bgp_plugin.BgpPlugin')
         self.assertEqual(context.NeutronCCContext()()['service_plugins'],
                          service_plugins)
 
