@@ -42,8 +42,8 @@ class NeutronAPIBasicDeployment(OpenStackAmuletDeployment):
         self._deploy()
 
         u.log.info('Waiting on extended status checks...')
-        exclude_services = []
-        self._auto_wait_for_status(exclude_services=exclude_services)
+        self.exclude_services = []
+        self._auto_wait_for_status(exclude_services=self.exclude_services)
 
         self.d.sentry.wait()
         self._initialize_tests()
@@ -534,6 +534,11 @@ class NeutronAPIBasicDeployment(OpenStackAmuletDeployment):
                 'rabbit_host': rabbitmq_relation['hostname']
             })
 
+        if self._get_openstack_release() >= self.xenial_queens:
+            domain = 'service_domain'
+            expected['keystone_authtoken']['project_domain_name'] = domain
+            expected['keystone_authtoken']['user_domain_name'] = domain
+
         for section, pairs in expected.iteritems():
             ret = u.validate_config_data(unit, conf, section, pairs)
             if ret:
@@ -658,6 +663,7 @@ class NeutronAPIBasicDeployment(OpenStackAmuletDeployment):
         u.log.debug('Making config change on {}...'.format(juju_service))
         mtime = u.get_sentry_time(sentry)
         self.d.configure(juju_service, set_alternate)
+        self._auto_wait_for_status(exclude_services=self.exclude_services)
 
         for s, conf_file in services.iteritems():
             u.log.debug("Checking that service restarted: {}".format(s))
