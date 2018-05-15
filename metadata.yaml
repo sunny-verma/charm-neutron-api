@@ -52,6 +52,8 @@ requires:
     interface: midonet
   external-dns:
     interface: designate
+  certificates:
+    interface: tls-certificates
 peers:
   cluster:
     interface: neutron-api-ha
