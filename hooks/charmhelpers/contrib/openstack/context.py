@@ -1506,6 +1506,10 @@ class NeutronAPIContext(OSContextGenerator):
                 'rel_key': 'enable-qos',
                 'default': False,
             },
+            'enable_vlan_trunking': {
+                'rel_key': 'enable-vlan-trunking',
+                'default': False,
+            },
         }
         ctxt = self.get_neutron_options({})
         for rid in relation_ids('neutron-plugin-api'):

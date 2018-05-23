@@ -591,6 +591,7 @@ class NeutronCCContextTest(CharmTestCase):
         plugin.return_value = None
         self.test_config.set('enable-l3ha', True)
         self.test_config.set('enable-qos', False)
+        self.test_config.set('enable-vlan-trunking', False)
         self.test_config.set('overlay-network-type', 'gre')
         self.test_config.set('neutron-plugin', 'ovs')
         self.test_config.set('l2-population', False)
@@ -791,10 +792,56 @@ class NeutronCCContextTest(CharmTestCase):
     @patch.object(context.NeutronCCContext, 'network_manager')
     @patch.object(context.NeutronCCContext, 'plugin')
     @patch('builtins.__import__')
+    def test_neutroncc_context_vlan_trunking(self, _import, plugin, nm):
+        plugin.return_value = None
+        self.os_release.return_value = 'newton'
+        self.test_config.set('neutron-plugin', 'ovs')
+        self.test_config.set('enable-vlan-trunking', True)
+        napi_ctxt = context.NeutronCCContext()()
+        expected_service_plugins = ('router,firewall,vpnaas,metering,'
+                                    'neutron_lbaas.services.loadbalancer.'
+                                    'plugin.LoadBalancerPluginv2,trunk')
+        self.assertEqual(napi_ctxt['service_plugins'],
+                         expected_service_plugins)
+
+    @patch.object(context.NeutronCCContext, 'network_manager')
+    @patch.object(context.NeutronCCContext, 'plugin')
+    @patch('builtins.__import__')
+    def test_neutroncc_context_vlan_trunking_invalid_plugin(self, _import,
+                                                            plugin, nm):
+        plugin.return_value = None
+        self.os_release.return_value = 'newton'
+        self.test_config.set('neutron-plugin', 'Calico')
+        self.test_config.set('enable-vlan-trunking', True)
+        napi_ctxt = context.NeutronCCContext()()
+        expected_service_plugins = ('router,firewall,vpnaas,metering,'
+                                    'neutron_lbaas.services.loadbalancer.'
+                                    'plugin.LoadBalancerPluginv2')
+        self.assertEqual(napi_ctxt['service_plugins'],
+                         expected_service_plugins)
+
+    @patch.object(context.NeutronCCContext, 'network_manager')
+    @patch.object(context.NeutronCCContext, 'plugin')
+    @patch('builtins.__import__')
+    def test_neutroncc_context_vlan_trunking_invalid_release(self, _import,
+                                                             plugin, nm):
+        plugin.return_value = None
+        self.os_release.return_value = 'mitaka'
+        self.test_config.set('neutron-plugin', 'ovs')
+        self.test_config.set('enable-vlan-trunking', True)
+        napi_ctxt = context.NeutronCCContext()()
+        expected_service_plugins = ('router,firewall,lbaas,vpnaas,metering')
+        self.assertEqual(napi_ctxt['service_plugins'],
+                         expected_service_plugins)
+
+    @patch.object(context.NeutronCCContext, 'network_manager')
+    @patch.object(context.NeutronCCContext, 'plugin')
+    @patch('builtins.__import__')
     def test_neutroncc_context_service_plugins(self, _import, plugin, nm):
         plugin.return_value = None
         self.test_config.set('enable-qos', False)
         self.test_config.set('enable-ml2-port-security', False)
+        self.test_config.set('enable-vlan-trunking', False)
         # icehouse
         self.os_release.return_value = 'icehouse'
         service_plugins = (

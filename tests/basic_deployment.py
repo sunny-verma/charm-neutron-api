@@ -644,6 +644,40 @@ class NeutronAPIBasicDeployment(OpenStackAmuletDeployment):
             self.d.configure('neutron-api', set_default)
             u.log.debug('OK')
 
+    def test_500_enable_vlan_trunking(self):
+        """Check VLAN trunking"""
+        if self._get_openstack_release() >= self.xenial_newton:
+            u.log.debug('Checking VLAN trunking setting in neutron-api '
+                        'neutron-openvswitch relation data...')
+            unit = self.neutron_api_sentry
+            relation = ['neutron-plugin-api',
+                        'neutron-openvswitch:neutron-plugin-api']
+
+            set_default = {'enable-vlan-trunking': 'False'}
+            set_alternate = {'enable-vlan-trunking': 'True'}
+            self.d.configure('neutron-api', set_alternate)
+
+            relation_data = unit.relation(relation[0], relation[1])
+            if relation_data['enable-vlan-trunking'] != 'True':
+                message = ("enable-vlan-trunking setting not set properly on "
+                           "neutron-plugin-api relation")
+                amulet.raise_status(amulet.FAIL, msg=message)
+
+            vlan_trunking_plugin = 'trunk'
+            config = u._get_config(unit, '/etc/neutron/neutron.conf')
+            service_plugins = config.get(
+                'DEFAULT',
+                'service_plugins').split(',')
+            if vlan_trunking_plugin not in service_plugins:
+                message = "{} not in service_plugins"\
+                    .format(vlan_trunking_plugin)
+                amulet.raise_status(amulet.FAIL, msg=message)
+
+            u.log.debug('Setting VLAN trunking back to {}'.format(
+                set_default['enable-vlan-trunking']))
+            self.d.configure('neutron-api', set_default)
+            u.log.debug('OK')
+
     def test_900_restart_on_config_change(self):
         """Verify that the specified services are restarted when the
         config is changed."""

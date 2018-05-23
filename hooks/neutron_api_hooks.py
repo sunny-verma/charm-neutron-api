@@ -91,6 +91,7 @@ from neutron_api_context import (
     get_overlay_network_type,
     IdentityServiceContext,
     is_qos_requested_and_valid,
+    is_vlan_trunking_requested_and_valid,
     EtcdContext,
 )
 
@@ -454,6 +455,7 @@ def neutron_plugin_api_relation_joined(rid=None):
             'enable-dvr': get_dvr(),
             'enable-l3ha': get_l3ha(),
             'enable-qos': is_qos_requested_and_valid(),
+            'enable-vlan-trunking': is_vlan_trunking_requested_and_valid(),
             'overlay-network-type': get_overlay_network_type(),
             'addr': unit_get('private-address'),
             'polling-interval': config('polling-interval'),

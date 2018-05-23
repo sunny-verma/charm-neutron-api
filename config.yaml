@@ -359,6 +359,12 @@ options:
     default: False
     description: |
       Enable QoS (assuming the plug-in or ml2 mechanism driver can support it)
+  enable-vlan-trunking:
+    type: boolean
+    default: False
+    description: |
+      Enable VLAN trunking or a VLAN aware VM. Neutron extension to access
+      lots of neutron networks over a single vNIC as tagged/encapsulated traffic.
   # Quota config
   quota-security-group:
     type: int
