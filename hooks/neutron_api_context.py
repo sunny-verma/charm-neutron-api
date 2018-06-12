@@ -218,6 +218,37 @@ def is_qos_requested_and_valid():
         return False
 
 
+def is_vlan_trunking_requested_and_valid():
+    """Check whether VLAN trunking should be enabled by checking whether
+       it has been requested and, if it has, is it supported in the current
+       configuration.
+    """
+
+    if config('enable-vlan-trunking'):
+        if VLAN not in _get_tenant_network_types():
+            msg = ("Disabling vlan-trunking, the vlan network type must be "
+                   "enabled to use vlan-trunking")
+            log(msg, ERROR)
+            return False
+
+        if config('neutron-plugin') != 'ovs':
+            msg = ("Disabling vlan-trunking, implementation only exists "
+                   "for the OVS plugin")
+            log(msg, ERROR)
+            return False
+
+        if CompareOpenStackReleases(os_release('neutron-server')) < 'newton':
+            msg = ("The vlan-trunking option is only supported on newton or "
+                   "later")
+            log(msg, ERROR)
+            return False
+        print("release >= newton")
+
+        return True
+    else:
+        return False
+
+
 class ApacheSSLContext(context.ApacheSSLContext):
 
     interfaces = ['https']
@@ -486,6 +517,10 @@ class NeutronCCContext(context.NeutronContext):
 
             if is_qos_requested_and_valid():
                 ctxt['service_plugins'].append('qos')
+
+            if is_vlan_trunking_requested_and_valid():
+                ctxt['service_plugins'].append('trunk')
+
             ctxt['service_plugins'] = ','.join(ctxt['service_plugins'])
 
         return ctxt
