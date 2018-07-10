@@ -889,7 +889,8 @@ class NeutronCCContextTest(CharmTestCase):
         service_plugins = (
             'router,firewall,vpnaas,metering,'
             'neutron_lbaas.services.loadbalancer.plugin.LoadBalancerPluginv2,'
-            'segments'
+            'segments,'
+            'neutron_dynamic_routing.services.bgp.bgp_plugin.BgpPlugin'
         )
         self.assertEqual(context.NeutronCCContext()()['service_plugins'],
                          service_plugins)
