@@ -387,8 +387,9 @@ def determine_packages(source=None):
     if CompareOpenStackReleases(release) >= 'kilo':
         packages.extend(KILO_PACKAGES)
     if CompareOpenStackReleases(release) >= 'ocata':
-        packages.remove('python-neutron-vpnaas')
         packages.append('python-neutron-dynamic-routing')
+    if CompareOpenStackReleases(release) >= 'pike':
+        packages.remove('python-neutron-vpnaas')
 
     if release == 'kilo' or CompareOpenStackReleases(release) >= 'mitaka':
         packages.append('python-networking-hyperv')
