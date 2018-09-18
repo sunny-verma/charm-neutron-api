@@ -59,6 +59,8 @@ from charmhelpers.contrib.openstack.utils import (
     is_unit_paused_set,
     pausable_restart_on_change as restart_on_change,
     CompareOpenStackReleases,
+    series_upgrade_prepare,
+    series_upgrade_complete,
 )
 
 from neutron_api_utils import (
@@ -82,6 +84,8 @@ from neutron_api_utils import (
     services,
     setup_ipv6,
     check_local_db_actions_complete,
+    pause_unit_helper,
+    resume_unit_helper,
 )
 from neutron_api_context import (
     get_dns_domain,
@@ -250,6 +254,12 @@ def vsd_changed(relation_id=None, remote_unit=None):
 @restart_on_change(restart_map(), stopstart=True)
 @harden()
 def config_changed():
+    # if we are paused, delay doing any config changed hooks.
+    # It is forced on the resume.
+    if is_unit_paused_set():
+        log("Unit is pause or upgrading. Skipping config_changed", "WARN")
+        return
+
     # If neutron is ready to be queried then check for incompatability between
     # existing neutron objects and charm settings
     if neutron_ready():
@@ -712,6 +722,20 @@ def certs_joined(relation_id=None):
 def certs_changed(relation_id=None, unit=None):
     process_certificates('neutron', relation_id, unit)
     configure_https()
+
+
+@hooks.hook('pre-series-upgrade')
+def pre_series_upgrade():
+    log("Running prepare series upgrade hook", "INFO")
+    series_upgrade_prepare(
+        pause_unit_helper, CONFIGS)
+
+
+@hooks.hook('post-series-upgrade')
+def post_series_upgrade():
+    log("Running complete series upgrade hook", "INFO")
+    series_upgrade_complete(
+        resume_unit_helper, CONFIGS)
 
 
 def main():
