@@ -37,6 +37,9 @@ TO_PATCH = [
     'apt_install',
     'apt_update',
     'apt_upgrade',
+    'apt_purge',
+    'apt_autoremove',
+    'filter_missing_packages',
     'add_source',
     'b64encode',
     'config',
@@ -310,6 +313,28 @@ class TestNeutronAPIUtils(CharmTestCase):
         self.get_os_codename_install_source.return_value = 'mitaka'
         configs = MagicMock()
         nutils.do_openstack_upgrade(configs)
+        self.assertFalse(stamp_neutron_db.called)
+
+    @patch.object(charmhelpers.contrib.openstack.utils,
+                  'get_os_codename_install_source')
+    @patch.object(nutils, 'migrate_neutron_database')
+    @patch.object(nutils, 'stamp_neutron_database')
+    def test_do_openstack_upgrade_rocky(self,
+                                        stamp_neutron_db,
+                                        migrate_neutron_db,
+                                        gsrc):
+        self.is_elected_leader.return_value = True
+        self.os_release.return_value = 'rocky'
+        self.config.side_effect = self.test_config.get
+        self.test_config.set('openstack-origin', 'cloud:bionic-rocky')
+        gsrc.return_value = 'rocky'
+        self.get_os_codename_install_source.return_value = 'rocky'
+        self.filter_missing_packages.return_value = ['python-neutron']
+        configs = MagicMock()
+        nutils.do_openstack_upgrade(configs)
+        self.apt_purge.assert_called_with(['python-neutron'], fatal=True)
+        self.apt_autoremove.assert_called_with(purge=True, fatal=True)
+        self.filter_missing_packages.assert_called_with(nutils.PURGE_PACKAGES)
         self.assertFalse(stamp_neutron_db.called)
 
     @patch.object(charmhelpers.contrib.openstack.utils,
