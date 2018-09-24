@@ -59,7 +59,10 @@ from charmhelpers.fetch import (
     apt_update,
     apt_install,
     apt_upgrade,
-    add_source
+    add_source,
+    filter_missing_packages,
+    apt_purge,
+    apt_autoremove,
 )
 
 from charmhelpers.core.host import (
@@ -99,22 +102,30 @@ KILO_PACKAGES = [
     'python-neutron-vpnaas',
 ]
 
-VERSION_PACKAGE = 'neutron-common'
-
-BASE_GIT_PACKAGES = [
-    'libffi-dev',
-    'libmysqlclient-dev',
-    'libssl-dev',
-    'libxml2-dev',
-    'libxslt1-dev',
-    'libyaml-dev',
-    'openstack-pkg-tools',
-    'python-dev',
-    'python-neutronclient',  # required for get_neutron_client() import
-    'python-pip',
-    'python-setuptools',
-    'zlib1g-dev',
+PY3_PACKAGES = [
+    'python3-neutron',
+    'python3-neutron-lbaas',
+    'python3-neutron-fwaas',
+    'python3-neutron-dynamic-routing',
+    'python3-networking-hyperv',
+    'python3-memcache',
 ]
+
+PURGE_PACKAGES = [
+    'python-neutron',
+    'python-neutron-lbaas',
+    'python-neutron-fwaas',
+    'python-neutron-vpnaas',
+    'python-neutron-dynamic-routing',
+    'python-networking-hyperv',
+    'python-memcache',
+    'python-keystoneclient',
+    'python-mysqldb',
+    'python-psycopg2',
+    'python-six',
+]
+
+VERSION_PACKAGE = 'neutron-common'
 
 BASE_SERVICES = [
     'neutron-server'
@@ -372,7 +383,11 @@ def manage_plugin():
 
 def determine_packages(source=None):
     # currently all packages match service names
-    packages = [] + BASE_PACKAGES
+    release = get_os_codename_install_source(source)
+    cmp_release = CompareOpenStackReleases(release)
+    packages = deepcopy(BASE_PACKAGES)
+    if cmp_release >= 'rocky':
+        packages.extend(PY3_PACKAGES)
 
     for v in resource_map().values():
         packages.extend(v['services'])
@@ -382,24 +397,35 @@ def determine_packages(source=None):
                                             'neutron')
             packages.extend(pkgs)
 
-    release = get_os_codename_install_source(source)
+    packages.extend(token_cache_pkgs(release=release))
 
-    if CompareOpenStackReleases(release) >= 'kilo':
-        packages.extend(KILO_PACKAGES)
-    if CompareOpenStackReleases(release) >= 'ocata':
-        packages.append('python-neutron-dynamic-routing')
-    if CompareOpenStackReleases(release) >= 'pike':
-        packages.remove('python-neutron-vpnaas')
+    if cmp_release < 'rocky':
+        if cmp_release >= 'kilo':
+            packages.extend(KILO_PACKAGES)
+        if cmp_release >= 'ocata':
+            packages.append('python-neutron-dynamic-routing')
+        if cmp_release >= 'pike':
+            packages.remove('python-neutron-vpnaas')
 
-    if release == 'kilo' or CompareOpenStackReleases(release) >= 'mitaka':
-        packages.append('python-networking-hyperv')
+        if release == 'kilo' or cmp_release >= 'mitaka':
+            packages.append('python-networking-hyperv')
 
     if config('neutron-plugin') == 'vsp':
         nuage_pkgs = config('nuage-packages').split()
-        packages += nuage_pkgs
+        packages.extend(nuage_pkgs)
 
-    packages.extend(token_cache_pkgs(release=release))
+    if cmp_release >= 'rocky':
+        packages = [p for p in packages if not p.startswith('python-')]
+
     return list(set(packages))
+
+
+def determine_purge_packages():
+    '''Return a list of packages to purge for the current OS release'''
+    cmp_os_source = CompareOpenStackReleases(os_release('neutron-common'))
+    if cmp_os_source >= 'rocky':
+        return PURGE_PACKAGES
+    return []
 
 
 def determine_ports():
@@ -523,6 +549,11 @@ def do_openstack_upgrade(configs):
     apt_install(packages=pkgs,
                 options=dpkg_opts,
                 fatal=True)
+
+    installed_packages = filter_missing_packages(determine_purge_packages())
+    if installed_packages:
+        apt_purge(installed_packages, fatal=True)
+        apt_autoremove(purge=True, fatal=True)
 
     # set CONFIGS to load templates from new release
     configs.set_release(openstack_release=new_os_rel)
