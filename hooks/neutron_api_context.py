@@ -218,6 +218,30 @@ def is_qos_requested_and_valid():
         return False
 
 
+def is_nsg_logging_enabled():
+    """
+    Check, if Neutron security groups logging should be enabled.
+    Works only on >=Queens and with OVS native firewall driver:
+    https://docs.openstack.org/neutron/queens/admin/config-logging.html
+    """
+    if config('enable-security-group-logging'):
+        if config('neutron-plugin') != 'ovs':
+            msg = ("Disabling NSG logging; implementation only exists "
+                   "for the OVS ML2 driver")
+            log(msg, ERROR)
+            return False
+
+        if CompareOpenStackReleases(os_release('neutron-server')) < 'queens':
+            msg = ("The enable-security-group-logging option is only "
+                   "supported on Queens or later")
+            log(msg, ERROR)
+            return False
+
+        return True
+
+    return False
+
+
 def is_vlan_trunking_requested_and_valid():
     """Check whether VLAN trunking should be enabled by checking whether
        it has been requested and, if it has, is it supported in the current
@@ -242,7 +266,6 @@ def is_vlan_trunking_requested_and_valid():
                    "later")
             log(msg, ERROR)
             return False
-        print("release >= newton")
 
         return True
     else:
@@ -514,8 +537,12 @@ class NeutronCCContext(context.NeutronContext):
                          ('neutron_dynamic_routing.'
                           'services.bgp.bgp_plugin.BgpPlugin')],
             }
+
             ctxt['service_plugins'] = service_plugins.get(
                 release, service_plugins['pike'])
+
+            if is_nsg_logging_enabled():
+                ctxt['service_plugins'].append('log')
 
             if is_qos_requested_and_valid():
                 ctxt['service_plugins'].append('qos')

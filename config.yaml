@@ -12,6 +12,16 @@ options:
     default: False
     description: |
       Setting this to True will allow supporting services to log to syslog.
+  enable-security-group-logging:
+    type: boolean
+    default: False
+    description: |
+      Setting this to True will enable logging for Security Groups. (Available from Queens)
+      WARNING: Enabling this may affect your disk I/O performance since this
+      will log ALL traffic being passed via NSG. Logging configuration
+      such as thresholds and a destination log file are available in the neutron-openvswitch charm.
+      Also, an neutron-openvswitch charm config option "firewall-driver" should be explicitly
+      set to "openvswitch", since security group logging works only with OVS firewall driver now.
   openstack-origin:
     type: string
     default: distro

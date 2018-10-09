@@ -11,3 +11,4 @@ xenial/
 .stestr
 __pycache__
 func-results.json
+.idea
