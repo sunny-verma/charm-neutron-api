@@ -444,24 +444,11 @@ class NeutronAPIBasicDeployment(OpenStackAmuletDeployment):
                 'dns_domain': 'openstack.example.'
             })
 
-        auth_uri = '{}://{}:{}'.format(
-            rel_napi_ks['service_protocol'],
-            rel_napi_ks['service_host'],
-            rel_napi_ks['service_port']
-        )
-        auth_url = '{}://{}:{}'.format(
-            rel_napi_ks['auth_protocol'],
-            rel_napi_ks['auth_host'],
-            rel_napi_ks['auth_port']
-        )
-
         if self._get_openstack_release() >= self.trusty_mitaka:
             expected['nova'] = {
                 'auth_section': 'keystone_authtoken',
             }
             expected['keystone_authtoken'] = {
-                'auth_uri': auth_uri.rstrip('/'),
-                'auth_url': auth_url.rstrip('/'),
                 'auth_type': 'password',
                 'project_domain_name': 'default',
                 'user_domain_name': 'default',
@@ -475,8 +462,6 @@ class NeutronAPIBasicDeployment(OpenStackAmuletDeployment):
                 'auth_section': 'keystone_authtoken',
             }
             expected['keystone_authtoken'] = {
-                'auth_uri': auth_uri,
-                'auth_url': auth_url,
                 'auth_plugin': 'password',
                 'project_domain_id': 'default',
                 'user_domain_id': 'default',
@@ -487,8 +472,6 @@ class NeutronAPIBasicDeployment(OpenStackAmuletDeployment):
             }
         elif self._get_openstack_release() == self.trusty_kilo:
             expected['keystone_authtoken'] = {
-                'auth_uri': auth_uri + '/',
-                'identity_uri': auth_url,
                 'admin_tenant_name': rel_napi_ks['service_tenant'],
                 'admin_user': 'neutron',
                 'admin_password': rel_napi_ks['service_password'],
