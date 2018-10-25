@@ -396,6 +396,10 @@ class NeutronCCContext(context.NeutronContext):
             ctxt['max_l3_agents_per_router'] = max_agents
             ctxt['min_l3_agents_per_router'] = min_agents
 
+        ctxt['allow_automatic_l3agent_failover'] = \
+            config('allow-automatic-l3agent-failover')
+        ctxt['allow_automatic_dhcp_failover'] = \
+            config('allow-automatic-dhcp-failover')
         ctxt['dhcp_agents_per_network'] = config('dhcp-agents-per-network')
         ctxt['tenant_network_types'] = self.neutron_tenant_network_types
         ctxt['overlay_network_type'] = self.neutron_overlay_network_type

@@ -330,6 +330,29 @@ options:
     description: |
       Minimum number of l3 agents to host a router. Only used when enable-l3ha
       is True.
+  allow-automatic-l3agent-failover:
+    type: boolean
+    default: False
+    description: |
+      Automatically reschedule routers from offline L3 agents to online L3
+      agents. Note that it is advised to set this to true even when
+      Distributed Virtual routing is enabled, since SNAT for nodes without
+      floating IPs is set up centrally on an L3 agent. For DVR the SNAT
+      namespace will be rescheduled only to L3 agents running in the 'dvr_snat'
+      mode, while l3 agents in the 'dvr' mode will only host qrouter and fip
+      namespaces.
+  allow-automatic-dhcp-failover:
+    type: boolean
+    default: True
+    description: |
+      Automatically remove networks from offline DHCP agents and reschedule
+      them to online DHCP agents. This option can be used in conjunction with
+      dhcp-agents-per-network as a single network can be maintained by multiple
+      dhcp agents. Practically, rescheduling involves creating a dhcp network
+      namespace and starting a DHCP agent like the default dnsmasq one in that
+      network namespace. If availability zone information is propagated to
+      neutron-openvswitch and neutron-gateway units from the underlying Juju
+      provider (e.g. MAAS), it may also affect rescheduling.
   dhcp-agents-per-network:
     type: int
     default: 1
