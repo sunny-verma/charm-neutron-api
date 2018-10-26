@@ -13,7 +13,9 @@
 # limitations under the License.
 
 import ast
+import json
 import re
+import traceback
 
 from collections import OrderedDict
 
@@ -499,6 +501,10 @@ class NeutronCCContext(context.NeutronContext):
 
         ctxt['mechanism_drivers'] = get_ml2_mechanism_drivers()
 
+        n_load_balancer_settings = NeutronLoadBalancerContext()()
+        if n_load_balancer_settings:
+            ctxt.update(n_load_balancer_settings)
+
         if config('neutron-plugin') in ['ovs', 'ml2', 'Calico']:
             ctxt['service_plugins'] = []
             service_plugins = {
@@ -536,10 +542,22 @@ class NeutronCCContext(context.NeutronContext):
                           'LoadBalancerPluginv2'),
                          ('neutron_dynamic_routing.'
                           'services.bgp.bgp_plugin.BgpPlugin')],
+                'rocky': ['router', 'firewall', 'metering', 'segments',
+                          ('neutron_dynamic_routing.'
+                           'services.bgp.bgp_plugin.BgpPlugin')],
             }
+            if cmp_release >= 'rocky':
+                if ctxt.get('load_balancer_name', None):
+                    # TODO(fnordahl): Remove when ``neutron_lbaas`` is retired
+                    service_plugins['rocky'].append('lbaasv2-proxy')
+                else:
+                    # TODO(fnordahl): Remove fall-back in next charm release
+                    service_plugins['rocky'].append(
+                        'neutron_lbaas.services.loadbalancer.plugin.'
+                        'LoadBalancerPluginv2')
 
             ctxt['service_plugins'] = service_plugins.get(
-                release, service_plugins['pike'])
+                release, service_plugins['rocky'])
 
             if is_nsg_logging_enabled():
                 ctxt['service_plugins'].append('log')
@@ -754,6 +772,30 @@ class NeutronApiApiPasteContext(context.OSContextGenerator):
         self.__validate_middleware(extra_middleware)
         return {'extra_middleware': extra_middleware}\
             if extra_middleware else {}
+
+
+class NeutronLoadBalancerContext(context.OSContextGenerator):
+    interfaces = ['neutron-load-balancer']
+
+    def __call__(self):
+        ctxt = {}
+        for rid in relation_ids('neutron-load-balancer'):
+            for unit in related_units(rid):
+                rdata = relation_get(rid=rid, unit=unit)
+                try:
+                    ctxt['load_balancer_name'] = json.loads(
+                        rdata.get('name'))
+                    ctxt['load_balancer_base_url'] = json.loads(
+                        rdata.get('base_url'))
+                except TypeError:
+                    pass
+                except json.decoder.JSONDecodeError:
+                    log(traceback.format_exc())
+                    raise ValueError('Invalid load balancer data'
+                                     ' - check the related charm')
+                if self.context_complete(ctxt):
+                    return ctxt
+        return {}
 
 
 class MidonetContext(context.OSContextGenerator):

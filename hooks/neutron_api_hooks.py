@@ -448,6 +448,20 @@ def neutron_api_relation_changed():
     CONFIGS.write(NEUTRON_CONF)
 
 
+@hooks.hook('neutron-load-balancer-relation-joined')
+def neutron_load_balancer_relation_joined(rid=None):
+    relation_data = {}
+    relation_data['neutron-api-ready'] = is_api_ready(CONFIGS)
+    relation_set(relation_id=rid, **relation_data)
+
+
+@hooks.hook('neutron-load-balancer-relation-changed')
+@restart_on_change(restart_map())
+def neutron_load_balancer_relation_changed(rid=None):
+    neutron_load_balancer_relation_joined(rid)
+    CONFIGS.write(NEUTRON_CONF)
+
+
 @hooks.hook('neutron-plugin-api-relation-joined')
 def neutron_plugin_api_relation_joined(rid=None):
     if config('neutron-plugin') == 'nsx':

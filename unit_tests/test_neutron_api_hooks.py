@@ -463,6 +463,25 @@ class NeutronAPIHooksTests(CharmTestCase):
         self._call_hook('neutron-api-relation-changed')
         self.assertTrue(self.CONFIGS.write.called_with(NEUTRON_CONF))
 
+    @patch.object(hooks, 'is_api_ready')
+    def test_neutron_load_balancer_relation_joined(self, is_api_ready):
+        is_api_ready.return_value = True
+        self._call_hook('neutron-load-balancer-relation-joined')
+        is_api_ready.assert_called_once_with(self.CONFIGS)
+        _relation_data = {'neutron-api-ready': True}
+        self.relation_set.assert_called_once_with(relation_id=None,
+                                                  **_relation_data)
+
+    @patch.object(hooks, 'is_api_ready')
+    def test_neutron_load_balancer_relation_changed(self, is_api_ready):
+        is_api_ready.return_value = True
+        self._call_hook('neutron-load-balancer-relation-changed')
+        is_api_ready.assert_called_once_with(self.CONFIGS)
+        _relation_data = {'neutron-api-ready': True}
+        self.relation_set.assert_called_once_with(relation_id=None,
+                                                  **_relation_data)
+        self.CONFIGS.write.assert_called_once_with(NEUTRON_CONF)
+
     def test_neutron_plugin_api_relation_joined_nol2(self):
         self.unit_get.return_value = '172.18.18.18'
         self.IdentityServiceContext.return_value = \

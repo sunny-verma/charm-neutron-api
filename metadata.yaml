@@ -31,6 +31,8 @@ provides:
     interface: neutron-api
   neutron-plugin-api:
     interface: neutron-plugin-api
+  neutron-load-balancer:
+    interface: neutron-load-balancer
 requires:
   shared-db:
     interface: mysql-shared
