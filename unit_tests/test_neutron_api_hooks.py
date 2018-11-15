@@ -91,6 +91,9 @@ TO_PATCH = [
     'get_relation_ip',
     'update_dns_ha_resource_params',
     'is_nsg_logging_enabled',
+    'remove_old_packages',
+    'services',
+    'service_restart',
 ]
 NEUTRON_CONF_DIR = "/etc/neutron"
 
@@ -222,12 +225,21 @@ class NeutronAPIHooksTests(CharmTestCase):
             self._call_hook('config-changed')
 
     def test_config_changed_with_openstack_upgrade_action(self):
+        self.remove_old_packages.return_value = False
         self.openstack_upgrade_available.return_value = True
         self.test_config.set('action-managed-upgrade', True)
 
         self._call_hook('config-changed')
 
         self.assertFalse(self.do_openstack_upgrade.called)
+
+    def test_config_changed_with_purge(self):
+        self.remove_old_packages.return_value = True
+        self.services.return_value = ['neutron-server']
+        self.openstack_upgrade_available.return_value = False
+        self._call_hook('config-changed')
+        self.remove_old_packages.assert_called_once_with()
+        self.service_restart.assert_called_once_with('neutron-server')
 
     def test_amqp_joined(self):
         self._call_hook('amqp-relation-joined')

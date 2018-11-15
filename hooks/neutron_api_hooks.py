@@ -42,6 +42,7 @@ from charmhelpers.core.hookenv import (
 from charmhelpers.core.host import (
     mkdir,
     service_reload,
+    service_restart,
 )
 
 from charmhelpers.fetch import (
@@ -86,6 +87,7 @@ from neutron_api_utils import (
     check_local_db_actions_complete,
     pause_unit_helper,
     resume_unit_helper,
+    remove_old_packages,
 )
 from neutron_api_context import (
     get_dns_domain,
@@ -295,9 +297,14 @@ def config_changed():
     apt_install(filter_installed_packages(
                 determine_packages(config('openstack-origin'))),
                 fatal=True)
+    packages_removed = remove_old_packages()
     configure_https()
     update_nrpe_config()
     CONFIGS.write_all()
+    if packages_removed and not is_unit_paused_set():
+        log("Package purge detected, restarting services", "INFO")
+        for s in services():
+            service_restart(s)
     for r_id in relation_ids('neutron-api'):
         neutron_api_relation_joined(rid=r_id)
     for r_id in relation_ids('neutron-plugin-api'):
