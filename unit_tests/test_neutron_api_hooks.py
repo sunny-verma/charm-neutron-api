@@ -390,6 +390,7 @@ class NeutronAPIHooksTests(CharmTestCase):
         self.relation_ids.side_effect = self._fake_relids
         _canonical_url.return_value = host
         self.api_port.return_value = port
+        self.get_dns_domain.return_value = "dnsdomain."
         neutron_url = '%s:%s' % (host, port)
         _relation_data = {
             'enable-sriov': False,
@@ -397,6 +398,7 @@ class NeutronAPIHooksTests(CharmTestCase):
             'neutron-url': neutron_url,
             'neutron-security-groups': 'no',
             'neutron-api-ready': 'no',
+            'dns-domain': 'dnsdomain.',
         }
         self._call_hook('neutron-api-relation-joined')
         self.relation_set.assert_called_with(
