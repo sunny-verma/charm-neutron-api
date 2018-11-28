@@ -442,6 +442,11 @@ def neutron_api_relation_joined(rid=None):
     else:
         relation_data['neutron-api-ready'] = "no"
 
+    # LP Bug#1805645
+    dns_domain = get_dns_domain()
+    if dns_domain:
+        relation_data['dns-domain'] = dns_domain
+
     relation_set(relation_id=rid, **relation_data)
     # Nova-cc may have grabbed the neutron endpoint so kick identity-service
     # relation to register that its here
