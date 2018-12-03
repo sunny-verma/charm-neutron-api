@@ -14,7 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import json
 import sys
 import uuid
 from subprocess import (
@@ -29,7 +28,6 @@ from charmhelpers.core.hookenv import (
     log,
     DEBUG,
     ERROR,
-    WARNING,
     relation_get,
     relation_ids,
     relation_set,
@@ -103,13 +101,12 @@ from neutron_api_context import (
 )
 
 from charmhelpers.contrib.hahelpers.cluster import (
-    get_hacluster_config,
     is_clustered,
     is_elected_leader,
 )
 
 from charmhelpers.contrib.openstack.ha.utils import (
-    update_dns_ha_resource_params,
+    generate_ha_relation_data,
 )
 
 from charmhelpers.payload.execd import execd_preinstall
@@ -124,9 +121,6 @@ from charmhelpers.contrib.openstack.neutron import (
 )
 
 from charmhelpers.contrib.network.ip import (
-    get_iface_for_address,
-    get_netmask_for_address,
-    is_ipv6,
     get_relation_ip,
 )
 
@@ -565,83 +559,13 @@ def cluster_changed():
 
 @hooks.hook('ha-relation-joined')
 def ha_joined(relation_id=None):
-    cluster_config = get_hacluster_config()
-    resources = {
-        'res_neutron_haproxy': 'lsb:haproxy',
+    extra_settings = {
+        'delete_resources': ['cl_nova_haproxy']
     }
-    resource_params = {
-        'res_neutron_haproxy': 'op monitor interval="5s"'
-    }
-    if config('dns-ha'):
-        update_dns_ha_resource_params(relation_id=relation_id,
-                                      resources=resources,
-                                      resource_params=resource_params)
-    else:
-        vip_group = []
-        for vip in cluster_config['vip'].split():
-            if is_ipv6(vip):
-                res_neutron_vip = 'ocf:heartbeat:IPv6addr'
-                vip_params = 'ipv6addr'
-            else:
-                res_neutron_vip = 'ocf:heartbeat:IPaddr2'
-                vip_params = 'ip'
-
-            iface = (get_iface_for_address(vip) or
-                     config('vip_iface'))
-            netmask = (get_netmask_for_address(vip) or
-                       config('vip_cidr'))
-
-            if iface is not None:
-                vip_key = 'res_neutron_{}_vip'.format(iface)
-                if vip_key in vip_group:
-                    if vip not in resource_params[vip_key]:
-                        vip_key = '{}_{}'.format(vip_key, vip_params)
-                    else:
-                        log("Resource '%s' (vip='%s') already exists in "
-                            "vip group - skipping" % (vip_key, vip), WARNING)
-                        continue
-
-                resources[vip_key] = res_neutron_vip
-                resource_params[vip_key] = (
-                    'params {ip}="{vip}" cidr_netmask="{netmask}" '
-                    'nic="{iface}"'.format(ip=vip_params,
-                                           vip=vip,
-                                           iface=iface,
-                                           netmask=netmask)
-                )
-                vip_group.append(vip_key)
-
-        if len(vip_group) >= 1:
-            relation_set(
-                relation_id=relation_id,
-                json_groups=json.dumps({
-                    'grp_neutron_vips': ' '.join(vip_group)
-                }, sort_keys=True)
-            )
-
-    init_services = {
-        'res_neutron_haproxy': 'haproxy'
-    }
-    clones = {
-        'cl_nova_haproxy': 'res_neutron_haproxy'
-    }
-    relation_set(relation_id=relation_id,
-                 corosync_bindiface=cluster_config['ha-bindiface'],
-                 corosync_mcastport=cluster_config['ha-mcastport'],
-                 json_init_services=json.dumps(init_services,
-                                               sort_keys=True),
-                 json_resources=json.dumps(resources,
-                                           sort_keys=True),
-                 json_resource_params=json.dumps(resource_params,
-                                                 sort_keys=True),
-                 json_clones=json.dumps(clones,
-                                        sort_keys=True))
-
-    # NOTE(jamespage): Clear any non-json based keys
-    relation_set(relation_id=relation_id,
-                 groups=None, init_services=None,
-                 resources=None, resource_params=None,
-                 clones=None)
+    settings = generate_ha_relation_data(
+        'neutron',
+        extra_settings=extra_settings)
+    relation_set(relation_id=relation_id, **settings)
 
 
 @hooks.hook('ha-relation-changed')

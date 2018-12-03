@@ -14,8 +14,6 @@
 
 import sys
 
-import json
-
 from mock import MagicMock, patch, call
 from test_utils import CharmTestCase
 
@@ -80,8 +78,6 @@ TO_PATCH = [
     'relation_set',
     'related_units',
     'unit_get',
-    'get_iface_for_address',
-    'get_netmask_for_address',
     'update_nrpe_config',
     'service_reload',
     'neutron_plugin_attribute',
@@ -89,11 +85,12 @@ TO_PATCH = [
     'force_etcd_restart',
     'status_set',
     'get_relation_ip',
-    'update_dns_ha_resource_params',
+    'generate_ha_relation_data',
     'is_nsg_logging_enabled',
     'remove_old_packages',
     'services',
     'service_restart',
+    'generate_ha_relation_data',
 ]
 NEUTRON_CONF_DIR = "/etc/neutron"
 
@@ -763,179 +760,11 @@ class NeutronAPIHooksTests(CharmTestCase):
         self.assertTrue(self.CONFIGS.write_all.called)
         self.assertTrue(mock_check_local_db_actions_complete.called)
 
-    @patch.object(hooks, 'get_hacluster_config')
-    def test_ha_joined(self, _get_ha_config):
-        _ha_config = {
-            'vip': '10.0.0.1',
-            'vip_cidr': '24',
-            'vip_iface': 'eth0',
-            'ha-bindiface': 'eth1',
-            'ha-mcastport': '5405',
-        }
-        vip_params = 'params ip="%s" cidr_netmask="255.255.255.0" nic="%s"' % \
-                     (_ha_config['vip'], _ha_config['vip_iface'])
-        _get_ha_config.return_value = _ha_config
-        self.get_iface_for_address.return_value = 'eth0'
-        self.get_netmask_for_address.return_value = '255.255.255.0'
-        _relation_data = {
-            'relation_id': None,
-            'corosync_bindiface': _ha_config['ha-bindiface'],
-            'corosync_mcastport': _ha_config['ha-mcastport'],
-            'json_init_services': json.dumps({
-                'res_neutron_haproxy': 'haproxy'
-            }, sort_keys=True),
-            'json_resources': json.dumps({
-                'res_neutron_eth0_vip': 'ocf:heartbeat:IPaddr2',
-                'res_neutron_haproxy': 'lsb:haproxy'
-            }, sort_keys=True),
-            'json_resource_params': json.dumps({
-                'res_neutron_eth0_vip': vip_params,
-                'res_neutron_haproxy': 'op monitor interval="5s"'
-            }, sort_keys=True),
-            'json_clones': json.dumps({
-                'cl_nova_haproxy': 'res_neutron_haproxy'
-            }, sort_keys=True),
-        }
+    def test_ha_relation_joined(self):
+        self.generate_ha_relation_data.return_value = {'rel_data': 'data'}
         self._call_hook('ha-relation-joined')
-        self.relation_set.assert_has_calls([
-            call(**_relation_data),
-            call(clones=None, groups=None,
-                 init_services=None, relation_id=None,
-                 resource_params=None, resources=None),
-        ])
-
-    @patch.object(hooks, 'get_hacluster_config')
-    def test_ha_joined_no_bound_ip(self, _get_ha_config):
-        _ha_config = {
-            'vip': '10.0.0.1',
-            'ha-bindiface': 'eth1',
-            'ha-mcastport': '5405',
-        }
-        vip_params = 'params ip="10.0.0.1" cidr_netmask="21" nic="eth120"'
-        _get_ha_config.return_value = _ha_config
-        self.test_config.set('vip_iface', 'eth120')
-        self.test_config.set('vip_cidr', '21')
-        self.get_iface_for_address.return_value = None
-        self.get_netmask_for_address.return_value = None
-        _relation_data = {
-            'relation_id': None,
-            'json_init_services': json.dumps({
-                'res_neutron_haproxy': 'haproxy'
-            }, sort_keys=True),
-            'corosync_bindiface': _ha_config['ha-bindiface'],
-            'corosync_mcastport': _ha_config['ha-mcastport'],
-            'json_resources': json.dumps({
-                'res_neutron_eth120_vip': 'ocf:heartbeat:IPaddr2',
-                'res_neutron_haproxy': 'lsb:haproxy'
-            }, sort_keys=True),
-            'json_resource_params': json.dumps({
-                'res_neutron_eth120_vip': vip_params,
-                'res_neutron_haproxy': 'op monitor interval="5s"'
-            }, sort_keys=True),
-            'json_clones': json.dumps({
-                'cl_nova_haproxy': 'res_neutron_haproxy'
-            }, sort_keys=True),
-        }
-        self._call_hook('ha-relation-joined')
-        self.relation_set.assert_has_calls([
-            call(**_relation_data),
-            call(clones=None, groups=None,
-                 init_services=None, relation_id=None,
-                 resource_params=None, resources=None),
-        ])
-
-    @patch.object(hooks, 'get_hacluster_config')
-    def test_ha_joined_with_ipv6(self, _get_ha_config):
-        self.test_config.set('prefer-ipv6', 'True')
-        _ha_config = {
-            'vip': '2001:db8:1::1',
-            'vip_cidr': '64',
-            'vip_iface': 'eth0',
-            'ha-bindiface': 'eth1',
-            'ha-mcastport': '5405',
-        }
-        vip_params = 'params ipv6addr="%s" ' \
-                     'cidr_netmask="ffff.ffff.ffff.ffff" ' \
-                     'nic="%s"' % \
-                     (_ha_config['vip'], _ha_config['vip_iface'])
-        _get_ha_config.return_value = _ha_config
-        self.get_iface_for_address.return_value = 'eth0'
-        self.get_netmask_for_address.return_value = 'ffff.ffff.ffff.ffff'
-        _relation_data = {
-            'relation_id': None,
-            'json_init_services': json.dumps({
-                'res_neutron_haproxy': 'haproxy'
-            }, sort_keys=True),
-            'corosync_bindiface': _ha_config['ha-bindiface'],
-            'corosync_mcastport': _ha_config['ha-mcastport'],
-            'json_resources': json.dumps({
-                'res_neutron_eth0_vip': 'ocf:heartbeat:IPv6addr',
-                'res_neutron_haproxy': 'lsb:haproxy'
-            }, sort_keys=True),
-            'json_resource_params': json.dumps({
-                'res_neutron_eth0_vip': vip_params,
-                'res_neutron_haproxy': 'op monitor interval="5s"'
-            }, sort_keys=True),
-            'json_clones': json.dumps({
-                'cl_nova_haproxy': 'res_neutron_haproxy'
-            }, sort_keys=True),
-        }
-        self._call_hook('ha-relation-joined')
-        self.relation_set.assert_has_calls([
-            call(**_relation_data),
-            call(clones=None, groups=None,
-                 init_services=None, relation_id=None,
-                 resource_params=None, resources=None),
-        ])
-
-    @patch.object(hooks, 'get_hacluster_config')
-    def test_ha_joined_dns_ha(self, _get_hacluster_config):
-        def _fake_update(resources, resource_params, relation_id=None):
-            resources.update({'res_neutron_public_hostname':
-                              'ocf:maas:dns'})
-            resource_params.update({'res_neutron_public_hostname':
-                                    'params fqdn="neutron-api.maas" '
-                                    'ip_address="10.0.0.1"'})
-
-        self.test_config.set('dns-ha', True)
-        _get_hacluster_config.return_value = {
-            'vip': None,
-            'ha-bindiface': 'em0',
-            'ha-mcastport': '8080',
-            'os-admin-hostname': None,
-            'os-internal-hostname': None,
-            'os-public-hostname': 'neutron-api.maas',
-        }
-        _relation_data = {
-            'relation_id': None,
-            'corosync_bindiface': 'em0',
-            'corosync_mcastport': '8080',
-            'json_init_services': json.dumps({
-                'res_neutron_haproxy': 'haproxy'
-            }, sort_keys=True),
-            'json_resources': json.dumps({
-                'res_neutron_public_hostname': 'ocf:maas:dns',
-                'res_neutron_haproxy': 'lsb:haproxy'
-            }, sort_keys=True),
-            'json_resource_params': json.dumps({
-                'res_neutron_public_hostname':
-                    'params fqdn="neutron-api.maas" ip_address="10.0.0.1"',
-                'res_neutron_haproxy': 'op monitor interval="5s"'
-            }, sort_keys=True),
-            'json_clones': json.dumps({
-                'cl_nova_haproxy': 'res_neutron_haproxy'
-            }, sort_keys=True),
-        }
-        self.update_dns_ha_resource_params.side_effect = _fake_update
-
-        hooks.ha_joined()
-        self.assertTrue(self.update_dns_ha_resource_params.called)
-        self.relation_set.assert_has_calls([
-            call(**_relation_data),
-            call(clones=None, groups=None,
-                 init_services=None, relation_id=None,
-                 resource_params=None, resources=None),
-        ])
+        self.relation_set.assert_called_once_with(
+            relation_id=None, rel_data='data')
 
     def test_ha_changed(self):
         self.test_relation.set({
