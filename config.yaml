@@ -249,7 +249,7 @@ options:
       a critical bug in the way the charm has configured their services
       and need it fixed immediately. We ask that whenever this is used,
       that the user consider opening a bug on this charm at
-      http://bugs.launchpad.net/charm-neutron-api providing an explanation of
+      https://bugs.launchpad.net/charm-neutron-api providing an explanation of
       why the config was needed so that we may consider it for inclusion as a
       natively supported config in the the charm.
   default-tenant-network-type:
