@@ -251,7 +251,7 @@ options:
       that the user consider opening a bug on this charm at
       https://bugs.launchpad.net/charm-neutron-api providing an explanation of
       why the config was needed so that we may consider it for inclusion as a
-      natively supported config in the the charm.
+      natively supported config in the charm.
   default-tenant-network-type:
     type: string
     default:
