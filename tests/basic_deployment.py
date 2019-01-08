@@ -424,7 +424,7 @@ class NeutronAPIBasicDeployment(OpenStackAmuletDeployment):
                                                  rel_napi_ks['auth_port'])
         rel_napi_db = self.pxc_sentry.relation('shared-db',
                                                'neutron-api:shared-db')
-        db_conn = 'mysql://neutron:{}@{}/neutron'.format(
+        db_conn = 'mysql+pymysql://neutron:{}@{}/neutron'.format(
             rel_napi_db['password'], rel_napi_db['db_host'])
 
         conf = '/etc/neutron/neutron.conf'
