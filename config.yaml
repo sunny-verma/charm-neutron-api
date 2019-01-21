@@ -726,3 +726,9 @@ options:
       The size in bits of the prefix for the IPv6 reverse lookup (PTR) zones.
       .
       NOTE: Use only when "reverse-dns-lookup" option is set to "True".
+  dhcp-load-type:
+    type: string
+    default: 'networks'
+    description: |
+      Sets the resource type used in weight calculations during
+      AZ-aware scheduling (networks, subnets or ports).

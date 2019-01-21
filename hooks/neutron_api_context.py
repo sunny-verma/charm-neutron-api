@@ -400,6 +400,7 @@ class NeutronCCContext(context.NeutronContext):
             config('allow-automatic-l3agent-failover')
         ctxt['allow_automatic_dhcp_failover'] = \
             config('allow-automatic-dhcp-failover')
+
         ctxt['dhcp_agents_per_network'] = config('dhcp-agents-per-network')
         ctxt['tenant_network_types'] = self.neutron_tenant_network_types
         ctxt['overlay_network_type'] = self.neutron_overlay_network_type
@@ -471,6 +472,13 @@ class NeutronCCContext(context.NeutronContext):
             for rid in relation_ids('external-dns'):
                 if related_units(rid):
                     enable_dns_extension_driver = True
+
+            # AZAwareWeightScheduler inherits from WeightScheduler and is
+            # available as of mitaka
+            ctxt['network_scheduler_driver'] = (
+                'neutron.scheduler.dhcp_agent_scheduler.AZAwareWeightScheduler'
+            )
+            ctxt['dhcp_load_type'] = config('dhcp-load-type')
 
         extension_drivers = []
         if config('enable-ml2-port-security'):

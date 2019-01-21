@@ -492,6 +492,10 @@ class NeutronCCContextTest(CharmTestCase):
             'vni_ranges': '1001:2000',
             'extension_drivers': 'port_security',
             'service_plugins': 'router,firewall,lbaas,vpnaas,metering',
+            'network_scheduler_driver': (
+                'neutron.scheduler.dhcp_agent_scheduler'
+                '.AZAwareWeightScheduler'),
+            'dhcp_load_type': 'networks',
         }
         napi_ctxt = context.NeutronCCContext()
         self.maxDiff = None
