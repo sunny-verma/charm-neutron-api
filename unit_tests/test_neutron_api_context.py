@@ -517,6 +517,13 @@ class NeutronCCContextTest(CharmTestCase):
             self.assertEqual('example.org.', ctxt['dns_domain'])
             self.assertEqual('port_security,dns', ctxt['extension_drivers'])
 
+        self.os_release.return_value = 'queens'
+        with patch.object(napi_ctxt, '_ensure_packages'):
+            ctxt = napi_ctxt()
+            self.assertEqual('example.org.', ctxt['dns_domain'])
+            self.assertEqual('port_security,dns_domain_ports',
+                             ctxt['extension_drivers'])
+
     @patch.object(context, 'NeutronLoadBalancerContext')
     @patch.object(context.NeutronCCContext, 'network_manager')
     @patch.object(context.NeutronCCContext, 'plugin')

@@ -49,6 +49,7 @@ TENANT_NET_TYPES = [VXLAN, GRE, VLAN, FLAT, LOCAL]
 
 EXTENSION_DRIVER_PORT_SECURITY = 'port_security'
 EXTENSION_DRIVER_DNS = 'dns'
+EXTENSION_DRIVER_DNS_DOMAIN_PORTS = 'dns_domain_ports'
 EXTENSION_DRIVER_QOS = 'qos'
 
 ETC_NEUTRON = '/etc/neutron'
@@ -484,7 +485,11 @@ class NeutronCCContext(context.NeutronContext):
         if config('enable-ml2-port-security'):
             extension_drivers.append(EXTENSION_DRIVER_PORT_SECURITY)
         if enable_dns_extension_driver:
-            extension_drivers.append(EXTENSION_DRIVER_DNS)
+            if cmp_release < 'queens':
+                extension_drivers.append(EXTENSION_DRIVER_DNS)
+            else:
+                extension_drivers.append(EXTENSION_DRIVER_DNS_DOMAIN_PORTS)
+
         if is_qos_requested_and_valid():
             extension_drivers.append(EXTENSION_DRIVER_QOS)
 

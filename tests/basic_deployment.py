@@ -587,7 +587,11 @@ class NeutronAPIBasicDeployment(OpenStackAmuletDeployment):
                 'supported_pci_vendor_devs': '8086:1515',
             })
 
-        if self._get_openstack_release() >= self.trusty_mitaka:
+        if self._get_openstack_release() >= self.xenial_queens:
+            expected['ml2'].update({
+                'extension_drivers': 'dns_domain_ports',
+            })
+        elif self._get_openstack_release() >= self.trusty_mitaka:
             expected['ml2'].update({
                 'extension_drivers': 'dns',
             })
